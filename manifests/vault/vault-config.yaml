@@ -25,14 +25,8 @@ data:
       disable_hostname = true
     }
 
-    # Audit logging to stdout (captured by Alloy)
-    audit {
-      type = "file"
-      path = "stdout"
-      options = {
-        log_raw = false
-      }
-    }
+    # Note: Audit logging must be enabled via API after Vault initialization
+    # vault audit enable file file_path=/vault/audit/audit.log
 
     api_addr = "http://vault:8200"
     cluster_addr = "http://vault:8201"

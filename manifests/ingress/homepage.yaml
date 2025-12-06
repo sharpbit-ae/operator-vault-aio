@@ -1,0 +1,473 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: homepage-config
+  namespace: vault-aio
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Vault AIO - Dashboard</title>
+      <style>
+        :root {
+          --bg-primary: #1a1a2e;
+          --bg-secondary: #16213e;
+          --bg-card: #0f3460;
+          --text-primary: #eaeaea;
+          --text-secondary: #a0a0a0;
+          --accent: #e94560;
+          --accent-hover: #ff6b6b;
+          --success: #00d26a;
+          --warning: #f0a500;
+          --info: #00b4d8;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+          color: var(--text-primary);
+          min-height: 100vh;
+          padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        header {
+          text-align: center;
+          padding: 40px 20px;
+          margin-bottom: 30px;
+        }
+        header h1 {
+          font-size: 2.5rem;
+          margin-bottom: 10px;
+          background: linear-gradient(90deg, var(--accent), var(--info));
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+        header p { color: var(--text-secondary); font-size: 1.1rem; }
+        .cluster-info {
+          background: var(--bg-card);
+          border-radius: 12px;
+          padding: 25px;
+          margin-bottom: 30px;
+          border: 1px solid rgba(255,255,255,0.1);
+        }
+        .cluster-info h2 {
+          color: var(--info);
+          margin-bottom: 15px;
+          font-size: 1.3rem;
+        }
+        .info-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 15px;
+        }
+        .info-item {
+          background: rgba(0,0,0,0.2);
+          padding: 15px;
+          border-radius: 8px;
+        }
+        .info-item label {
+          color: var(--text-secondary);
+          font-size: 0.85rem;
+          display: block;
+          margin-bottom: 5px;
+        }
+        .info-item span {
+          font-size: 1.1rem;
+          font-weight: 600;
+        }
+        .services-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          gap: 20px;
+          margin-bottom: 30px;
+        }
+        .service-card {
+          background: var(--bg-card);
+          border-radius: 12px;
+          padding: 25px;
+          border: 1px solid rgba(255,255,255,0.1);
+          transition: transform 0.3s, box-shadow 0.3s;
+          text-decoration: none;
+          color: inherit;
+          display: block;
+        }
+        .service-card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+          border-color: var(--accent);
+        }
+        .service-header {
+          display: flex;
+          align-items: center;
+          margin-bottom: 15px;
+        }
+        .service-icon {
+          width: 50px;
+          height: 50px;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 24px;
+          margin-right: 15px;
+        }
+        .service-title h3 { font-size: 1.2rem; margin-bottom: 3px; }
+        .service-title span { color: var(--text-secondary); font-size: 0.85rem; }
+        .service-description {
+          color: var(--text-secondary);
+          font-size: 0.9rem;
+          line-height: 1.5;
+          margin-bottom: 15px;
+        }
+        .service-url {
+          background: rgba(0,0,0,0.3);
+          padding: 10px 15px;
+          border-radius: 6px;
+          font-family: monospace;
+          font-size: 0.85rem;
+          color: var(--info);
+        }
+        .status-badge {
+          display: inline-block;
+          padding: 4px 10px;
+          border-radius: 20px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          margin-left: auto;
+        }
+        .status-running { background: var(--success); color: #000; }
+        .status-dev { background: var(--warning); color: #000; }
+
+        /* Service-specific colors */
+        .vault .service-icon { background: linear-gradient(135deg, #ffd700, #ffb300); }
+        .grafana .service-icon { background: linear-gradient(135deg, #f46800, #ff5722); }
+        .prometheus .service-icon { background: linear-gradient(135deg, #e6522c, #ff7043); }
+        .alertmanager .service-icon { background: linear-gradient(135deg, #ff5252, #f44336); }
+        .loki .service-icon { background: linear-gradient(135deg, #00b4d8, #0077b6); }
+        .tempo .service-icon { background: linear-gradient(135deg, #7c3aed, #8b5cf6); }
+        .argocd .service-icon { background: linear-gradient(135deg, #ef6c00, #ff9800); }
+        .chrony .service-icon { background: linear-gradient(135deg, #4caf50, #66bb6a); }
+
+        .section-title {
+          font-size: 1.5rem;
+          margin-bottom: 20px;
+          color: var(--text-primary);
+          padding-left: 15px;
+          border-left: 4px solid var(--accent);
+        }
+
+        footer {
+          text-align: center;
+          padding: 30px;
+          color: var(--text-secondary);
+          font-size: 0.9rem;
+        }
+        footer a { color: var(--info); text-decoration: none; }
+
+        .quick-links {
+          background: var(--bg-card);
+          border-radius: 12px;
+          padding: 25px;
+          margin-bottom: 30px;
+          border: 1px solid rgba(255,255,255,0.1);
+        }
+        .quick-links h2 { color: var(--accent); margin-bottom: 15px; }
+        .links-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+        }
+        .quick-link {
+          background: rgba(0,0,0,0.3);
+          padding: 10px 20px;
+          border-radius: 6px;
+          color: var(--text-primary);
+          text-decoration: none;
+          transition: background 0.3s;
+        }
+        .quick-link:hover { background: var(--accent); }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <header>
+          <h1>Vault AIO Dashboard</h1>
+          <p>All-in-One HashiCorp Vault with Integrated Observability Stack</p>
+        </header>
+
+        <div class="cluster-info">
+          <h2>Cluster Information</h2>
+          <div class="info-grid">
+            <div class="info-item">
+              <label>VM Name</label>
+              <span>vault-aio</span>
+            </div>
+            <div class="info-item">
+              <label>IP Address</label>
+              <span>10.0.0.20</span>
+            </div>
+            <div class="info-item">
+              <label>Kubernetes</label>
+              <span>k3d (k3s v1.31)</span>
+            </div>
+            <div class="info-item">
+              <label>Namespace</label>
+              <span>vault-aio</span>
+            </div>
+            <div class="info-item">
+              <label>Resources</label>
+              <span>8GB RAM / 4 vCPU</span>
+            </div>
+            <div class="info-item">
+              <label>Storage</label>
+              <span>100GB Disk</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="quick-links">
+          <h2>Quick Access</h2>
+          <div class="links-row">
+            <a href="https://vault.vault-aio.local" class="quick-link">Vault</a>
+            <a href="https://grafana.vault-aio.local" class="quick-link">Grafana</a>
+            <a href="https://prometheus.vault-aio.local" class="quick-link">Prometheus</a>
+            <a href="https://alertmanager.vault-aio.local" class="quick-link">Alertmanager</a>
+            <a href="https://argocd.vault-aio.local" class="quick-link">ArgoCD</a>
+          </div>
+        </div>
+
+        <h2 class="section-title">Core Services</h2>
+        <div class="services-grid">
+          <a href="https://vault.vault-aio.local" class="service-card vault">
+            <div class="service-header">
+              <div class="service-icon">V</div>
+              <div class="service-title">
+                <h3>HashiCorp Vault</h3>
+                <span>Secrets Management</span>
+              </div>
+              <span class="status-badge status-dev">DEV</span>
+            </div>
+            <p class="service-description">
+              Secure secrets storage, dynamic credentials, encryption as a service, and PKI management.
+            </p>
+            <div class="service-url">https://vault.vault-aio.local</div>
+          </a>
+
+          <a href="https://argocd.vault-aio.local" class="service-card argocd">
+            <div class="service-header">
+              <div class="service-icon">A</div>
+              <div class="service-title">
+                <h3>ArgoCD</h3>
+                <span>GitOps Continuous Delivery</span>
+              </div>
+              <span class="status-badge status-running">RUNNING</span>
+            </div>
+            <p class="service-description">
+              Declarative, GitOps continuous delivery tool for Kubernetes applications.
+            </p>
+            <div class="service-url">https://argocd.vault-aio.local</div>
+          </a>
+        </div>
+
+        <h2 class="section-title">Monitoring & Visualization</h2>
+        <div class="services-grid">
+          <a href="https://grafana.vault-aio.local" class="service-card grafana">
+            <div class="service-header">
+              <div class="service-icon">G</div>
+              <div class="service-title">
+                <h3>Grafana</h3>
+                <span>Visualization Platform</span>
+              </div>
+              <span class="status-badge status-running">RUNNING</span>
+            </div>
+            <p class="service-description">
+              Query, visualize, and alert on metrics from Prometheus, Loki, and Tempo.
+              <br><strong>Login:</strong> admin / vault-aio-admin
+            </p>
+            <div class="service-url">https://grafana.vault-aio.local</div>
+          </a>
+
+          <a href="https://prometheus.vault-aio.local" class="service-card prometheus">
+            <div class="service-header">
+              <div class="service-icon">P</div>
+              <div class="service-title">
+                <h3>Prometheus</h3>
+                <span>Metrics Collection</span>
+              </div>
+              <span class="status-badge status-running">RUNNING</span>
+            </div>
+            <p class="service-description">
+              Time-series metrics collection and alerting. Scrapes Vault, Kubernetes, and all services.
+            </p>
+            <div class="service-url">https://prometheus.vault-aio.local</div>
+          </a>
+
+          <a href="https://alertmanager.vault-aio.local" class="service-card alertmanager">
+            <div class="service-header">
+              <div class="service-icon">!</div>
+              <div class="service-title">
+                <h3>Alertmanager</h3>
+                <span>Alert Routing</span>
+              </div>
+              <span class="status-badge status-running">RUNNING</span>
+            </div>
+            <p class="service-description">
+              Handles alerts from Prometheus, including silencing, inhibition, and routing.
+            </p>
+            <div class="service-url">https://alertmanager.vault-aio.local</div>
+          </a>
+        </div>
+
+        <h2 class="section-title">Logging & Tracing</h2>
+        <div class="services-grid">
+          <a href="https://loki.vault-aio.local/ready" class="service-card loki">
+            <div class="service-header">
+              <div class="service-icon">L</div>
+              <div class="service-title">
+                <h3>Loki</h3>
+                <span>Log Aggregation</span>
+              </div>
+              <span class="status-badge status-running">RUNNING</span>
+            </div>
+            <p class="service-description">
+              Horizontally-scalable log aggregation system. Query via Grafana Explore.
+            </p>
+            <div class="service-url">https://loki.vault-aio.local (API)</div>
+          </a>
+
+          <a href="https://tempo.vault-aio.local/ready" class="service-card tempo">
+            <div class="service-header">
+              <div class="service-icon">T</div>
+              <div class="service-title">
+                <h3>Tempo</h3>
+                <span>Distributed Tracing</span>
+              </div>
+              <span class="status-badge status-running">RUNNING</span>
+            </div>
+            <p class="service-description">
+              High-scale distributed tracing backend. Visualize traces in Grafana.
+            </p>
+            <div class="service-url">https://tempo.vault-aio.local (API)</div>
+          </a>
+
+          <div class="service-card chrony" style="cursor: default;">
+            <div class="service-header">
+              <div class="service-icon">C</div>
+              <div class="service-title">
+                <h3>Chrony</h3>
+                <span>NTP Time Sync</span>
+              </div>
+              <span class="status-badge status-running">RUNNING</span>
+            </div>
+            <p class="service-description">
+              Network Time Protocol synchronization for accurate cluster time. Runs as DaemonSet.
+            </p>
+            <div class="service-url">UDP Port 123 (NTP)</div>
+          </div>
+        </div>
+
+        <div class="cluster-info">
+          <h2>Network Configuration</h2>
+          <div class="info-grid">
+            <div class="info-item">
+              <label>VM Network</label>
+              <span>10.0.0.0/24</span>
+            </div>
+            <div class="info-item">
+              <label>Pod Network</label>
+              <span>10.42.0.0/16</span>
+            </div>
+            <div class="info-item">
+              <label>Service Network</label>
+              <span>10.43.0.0/16</span>
+            </div>
+            <div class="info-item">
+              <label>Ingress</label>
+              <span>Traefik (k3s)</span>
+            </div>
+            <div class="info-item">
+              <label>HTTP Port</label>
+              <span>80</span>
+            </div>
+            <div class="info-item">
+              <label>HTTPS Port</label>
+              <span>443</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="cluster-info">
+          <h2>Access from Host</h2>
+          <div class="info-grid" style="grid-template-columns: 1fr;">
+            <div class="info-item">
+              <label>Add to /etc/hosts on your machine:</label>
+              <span style="font-family: monospace; font-size: 0.9rem;">
+                10.0.0.20 vault-aio.local vault.vault-aio.local grafana.vault-aio.local prometheus.vault-aio.local alertmanager.vault-aio.local loki.vault-aio.local tempo.vault-aio.local argocd.vault-aio.local
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <footer>
+          <p>Vault AIO - Powered by <a href="https://github.com/sharpbit-ae/operator-vault-aio">operator-vault-aio</a></p>
+          <p>Built with HashiCorp Vault, Grafana Stack, and Kubernetes</p>
+        </footer>
+      </div>
+    </body>
+    </html>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: homepage
+  namespace: vault-aio
+  labels:
+    app: homepage
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: homepage
+  template:
+    metadata:
+      labels:
+        app: homepage
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: html
+              mountPath: /usr/share/nginx/html
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "10m"
+            limits:
+              memory: "64Mi"
+              cpu: "50m"
+      volumes:
+        - name: html
+          configMap:
+            name: homepage-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: homepage
+  namespace: vault-aio
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 80
+      name: http
+  selector:
+    app: homepage

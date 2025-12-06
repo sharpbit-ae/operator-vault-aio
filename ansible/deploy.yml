@@ -1,0 +1,195 @@
+---
+# Vault AIO Orchestrator
+# Creates a standalone Vault VM with integrated monitoring, logging, tracing, and NTP
+
+# Step 1: Create Vault AIO VM on hypervisor (localhost)
+- name: Create Vault AIO VM
+  hosts: localhost
+  connection: local
+  become: true
+  gather_facts: true
+
+  vars:
+    phases_dir: "/home/aeonadmin/aeon-infra/phases"
+
+  tasks:
+    - name: Run Phase 1 - VM Creation
+      include_role:
+        name: "/home/aeonadmin/aeon-infra/phases/phase-1-vm-create/roles/vm_create"
+      vars:
+        vm_name: "vault-aio"
+        vm_hostname: "vault-aio.aeon.local"
+        vm_ip_address: "10.0.0.20"
+        vm_gateway: "10.0.0.1"
+        vm_dns_servers: ["10.0.0.1", "8.8.8.8"]
+        vm_libvirt_network: "aeon_router"
+        vm_network_gateway: "10.0.0.1"
+        vm_network_netmask: "255.255.255.0"
+        vm_network_dhcp_start: "10.0.0.100"
+        vm_network_dhcp_end: "10.0.0.199"
+        vm_memory_mb: 8192  # 8 GB for full stack
+        vm_vcpus: 4
+        vm_disk_size_gb: 100  # Larger for logs/metrics storage
+        vm_user: "aeonuser"
+        vm_user_password: "changeme123"
+        vm_ssh_pubkey: "{{ lookup('file', lookup('env', 'HOME') + '/.ssh/id_rsa.pub') }}"
+        vm_ssh_key_path: "{{ lookup('env', 'HOME') }}/.ssh/id_rsa"
+        create_network: false  # Network already exists
+
+# Step 2-4: Configure Vault AIO VM
+- name: Configure Vault AIO VM
+  hosts: vault_aio
+  become: true
+  gather_facts: true
+
+  vars:
+    phases_dir: "/home/aeonadmin/aeon-infra/phases"
+
+  tasks:
+    - name: Wait for VM to be reachable
+      wait_for_connection:
+        timeout: 300
+
+    - name: Gather facts
+      setup:
+
+    - name: Run Phase 2 - CIS Hardening
+      include_role:
+        name: "/home/aeonadmin/aeon-infra/phases/phase-2-cis-harden/roles/cis_harden"
+
+    - name: Run Phase 2.5 - WireGuard Mesh
+      include_role:
+        name: "/home/aeonadmin/aeon-infra/phases/phase-2.5-wireguard-mesh/roles/wireguard_mesh"
+      vars:
+        wireguard_tunnel_ip: "10.10.10.20"
+
+    - name: Run Phase 3 - k3d Installation
+      include_role:
+        name: "/home/aeonadmin/aeon-infra/phases/phase-3-k3d-install/roles/k3d_install"
+      vars:
+        k8s_cluster_name: "vault-aio"
+
+    - name: Run Phase 4 - ArgoCD Installation
+      include_role:
+        name: "/home/aeonadmin/aeon-infra/phases/phase-4-argocd-install/roles/argocd_install"
+
+# Step 5: Deploy Vault AIO Stack
+- name: Deploy Vault AIO Stack
+  hosts: vault_aio
+  become: true
+  gather_facts: true
+
+  vars:
+    manifests_dir: "{{ playbook_dir }}/../manifests"
+
+  tasks:
+    - name: Create manifests directory on VM
+      file:
+        path: /opt/vault-aio
+        state: directory
+        mode: '0755'
+
+    - name: Copy manifests to VM
+      synchronize:
+        src: "{{ manifests_dir }}/"
+        dest: /opt/vault-aio/
+        recursive: yes
+
+    - name: Apply Vault AIO manifests
+      shell: |
+        export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+        kubectl apply -k /opt/vault-aio/
+      register: apply_result
+      retries: 3
+      delay: 10
+      until: apply_result.rc == 0
+
+    - name: Wait for Vault pod to be ready
+      shell: |
+        export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+        kubectl wait --for=condition=Ready pod -l app=vault -n vault-aio --timeout=300s
+      register: vault_ready
+      retries: 5
+      delay: 30
+      until: vault_ready.rc == 0
+
+    - name: Wait for Prometheus pod to be ready
+      shell: |
+        export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+        kubectl wait --for=condition=Ready pod -l app=prometheus -n vault-aio --timeout=300s
+      register: prom_ready
+      retries: 5
+      delay: 30
+      until: prom_ready.rc == 0
+
+    - name: Wait for Grafana pod to be ready
+      shell: |
+        export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+        kubectl wait --for=condition=Ready pod -l app=grafana -n vault-aio --timeout=300s
+      register: grafana_ready
+      retries: 5
+      delay: 30
+      until: grafana_ready.rc == 0
+
+    - name: Get pod status
+      shell: |
+        export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+        kubectl get pods -n vault-aio
+      register: pod_status
+
+    - name: Display pod status
+      debug:
+        var: pod_status.stdout_lines
+
+# Step 6: Initialize Vault
+- name: Initialize Vault
+  hosts: vault_aio
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Check if Vault is initialized
+      shell: |
+        export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+        kubectl exec -n vault-aio deploy/vault -- vault status -format=json 2>/dev/null | jq -r .initialized
+      register: vault_initialized
+      failed_when: false
+
+    - name: Initialize Vault
+      shell: |
+        export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+        kubectl exec -n vault-aio deploy/vault -- vault operator init -key-shares=5 -key-threshold=3 -format=json
+      register: vault_init
+      when: vault_initialized.stdout != "true"
+
+    - name: Save Vault init output locally
+      copy:
+        content: "{{ vault_init.stdout }}"
+        dest: "/root/vault-aio-init-{{ ansible_date_time.epoch }}.json"
+        mode: '0600'
+      when: vault_init is changed
+
+    - name: Unseal Vault
+      shell: |
+        export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+        KEY=$(echo '{{ vault_init.stdout }}' | jq -r ".unseal_keys_b64[{{ item }}]")
+        kubectl exec -n vault-aio deploy/vault -- vault operator unseal "$KEY"
+      loop: [0, 1, 2]
+      when: vault_init is changed
+
+    - name: Display completion message
+      debug:
+        msg:
+          - "=== Vault AIO Deployment Complete ==="
+          - ""
+          - "VM IP: 10.0.0.20"
+          - "WireGuard IP: 10.10.10.20"
+          - ""
+          - "Access services via port-forward:"
+          - "  Grafana:  kubectl port-forward -n vault-aio svc/grafana 3000:3000"
+          - "  Vault:    kubectl port-forward -n vault-aio svc/vault 8200:8200"
+          - "  Prometheus: kubectl port-forward -n vault-aio svc/prometheus 9090:9090"
+          - ""
+          - "Grafana credentials: admin / vault-aio-admin"
+          - ""
+          - "Vault init keys saved to: /root/vault-aio-init-*.json"

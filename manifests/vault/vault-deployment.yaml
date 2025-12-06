@@ -54,10 +54,10 @@ spec:
               value: "json"
           args:
             - server
-            - -config=/vault/config/vault.hcl
+            - -dev
+            - -dev-root-token-id=root
+            - -dev-listen-address=0.0.0.0:8200
           volumeMounts:
-            - name: vault-config
-              mountPath: /vault/config
             - name: vault-data
               mountPath: /vault/data
           resources:
@@ -86,10 +86,11 @@ spec:
                 - ALL
               add:
                 - IPC_LOCK
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
       volumes:
-        - name: vault-config
-          configMap:
-            name: vault-config
         - name: vault-data
           persistentVolumeClaim:
             claimName: vault-data

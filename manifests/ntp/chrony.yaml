@@ -102,21 +102,8 @@ spec:
             limits:
               memory: "64Mi"
               cpu: "50m"
-        # Chrony exporter for Prometheus
-        - name: chrony-exporter
-          image: superque/chrony-exporter:0.6.0
-          args:
-            - --chrony.address=127.0.0.1:323
-          ports:
-            - containerPort: 9123
-              name: metrics
-          resources:
-            requests:
-              memory: "16Mi"
-              cpu: "5m"
-            limits:
-              memory: "32Mi"
-              cpu: "25m"
+        # Chrony exporter for Prometheus (removed - image not available)
+        # NTP synchronization will be handled by the chrony container itself
       volumes:
         - name: config
           configMap:

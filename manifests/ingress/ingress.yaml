@@ -1,0 +1,99 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vault-aio-ingress
+  namespace: vault-aio
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    cert-manager.io/cluster-issuer: vault-aio-ca-issuer
+spec:
+  tls:
+    - hosts:
+        - vault-aio.local
+        - vault.vault-aio.local
+        - grafana.vault-aio.local
+        - prometheus.vault-aio.local
+        - alertmanager.vault-aio.local
+        - loki.vault-aio.local
+        - tempo.vault-aio.local
+      secretName: vault-aio-tls
+  rules:
+    # Homepage
+    - host: vault-aio.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: homepage
+                port:
+                  number: 80
+    # Vault UI
+    - host: vault.vault-aio.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: vault
+                port:
+                  number: 8200
+    # Grafana
+    - host: grafana.vault-aio.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana
+                port:
+                  number: 3000
+    # Prometheus
+    - host: prometheus.vault-aio.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: prometheus
+                port:
+                  number: 9090
+    # Alertmanager
+    - host: alertmanager.vault-aio.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: alertmanager
+                port:
+                  number: 9093
+    # Loki (API only, no UI)
+    - host: loki.vault-aio.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: loki
+                port:
+                  number: 3100
+    # Tempo (API only, no UI)
+    - host: tempo.vault-aio.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: tempo
+                port:
+                  number: 3200
