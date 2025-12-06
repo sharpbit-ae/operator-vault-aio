@@ -1,0 +1,184 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "id": null,
+  "links": [],
+  "templating": {
+    "list": [
+      {
+        "current": {"selected": true, "text": "All", "value": "$__all"},
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "name": "app",
+        "options": [
+          {"selected": true, "text": "All", "value": "$__all"},
+          {"selected": false, "text": "vault", "value": "vault"},
+          {"selected": false, "text": "prometheus", "value": "prometheus"},
+          {"selected": false, "text": "grafana", "value": "grafana"},
+          {"selected": false, "text": "loki", "value": "loki"},
+          {"selected": false, "text": "tempo", "value": "tempo"},
+          {"selected": false, "text": "alertmanager", "value": "alertmanager"},
+          {"selected": false, "text": "alloy", "value": "alloy"},
+          {"selected": false, "text": "chrony", "value": "chrony"}
+        ],
+        "query": "vault,prometheus,grafana,loki,tempo,alertmanager,alloy,chrony",
+        "type": "custom"
+      },
+      {
+        "current": {"selected": true, "text": ["error", "warn"], "value": ["error", "warn"]},
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "name": "level",
+        "options": [
+          {"selected": false, "text": "All", "value": "$__all"},
+          {"selected": true, "text": "error", "value": "error"},
+          {"selected": true, "text": "warn", "value": "warn"},
+          {"selected": false, "text": "info", "value": "info"},
+          {"selected": false, "text": "debug", "value": "debug"}
+        ],
+        "query": "error,warn,info,debug",
+        "type": "custom"
+      },
+      {
+        "current": {"selected": false, "text": "", "value": ""},
+        "hide": 0,
+        "name": "search",
+        "options": [],
+        "query": "",
+        "type": "textbox"
+      }
+    ]
+  },
+  "panels": [
+    {"gridPos": {"h": 1, "w": 24, "x": 0, "y": 0}, "id": 100, "options": {"content": "**Filters:** App: $app | Level: $level | Search: $search"}, "title": "", "transparent": true, "type": "text"},
+
+    {"gridPos": {"h": 1, "w": 24, "x": 0, "y": 1}, "id": 200, "title": "Log Summary", "type": "row"},
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 10}, {"color": "red", "value": 50}]}}},
+      "gridPos": {"h": 3, "w": 4, "x": 0, "y": 2},
+      "id": 1,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "reduceOptions": {"calcs": ["sum"]}, "textMode": "value"},
+      "targets": [{"expr": "sum(count_over_time({namespace=\"vault-aio\", app=~\"$app\"} |~ \"(?i)error\" [$__range]))", "refId": "A"}],
+      "title": "Errors",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 20}, {"color": "orange", "value": 100}]}}},
+      "gridPos": {"h": 3, "w": 4, "x": 4, "y": 2},
+      "id": 2,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "reduceOptions": {"calcs": ["sum"]}, "textMode": "value"},
+      "targets": [{"expr": "sum(count_over_time({namespace=\"vault-aio\", app=~\"$app\"} |~ \"(?i)warn\" !~ \"(?i)error\" [$__range]))", "refId": "A"}],
+      "title": "Warnings",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}}},
+      "gridPos": {"h": 3, "w": 4, "x": 8, "y": 2},
+      "id": 3,
+      "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "center", "reduceOptions": {"calcs": ["sum"]}, "textMode": "value"},
+      "targets": [{"expr": "sum(count_over_time({namespace=\"vault-aio\", app=~\"$app\"} [$__range]))", "refId": "A"}],
+      "title": "Total Lines",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"drawStyle": "bars", "fillOpacity": 80, "stacking": {"mode": "normal"}}}},
+      "gridPos": {"h": 3, "w": 12, "x": 12, "y": 2},
+      "id": 4,
+      "targets": [
+        {"expr": "sum by (app) (count_over_time({namespace=\"vault-aio\", app=~\"$app\"} |~ \"(?i)($level)\" [$__interval]))", "legendFormat": "{{app}}", "refId": "A"}
+      ],
+      "title": "Log Volume by App",
+      "type": "timeseries"
+    },
+
+    {"gridPos": {"h": 1, "w": 24, "x": 0, "y": 5}, "id": 201, "title": "Errors & Warnings (Important)", "type": "row", "collapsed": false},
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 6},
+      "id": 10,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": true, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true},
+      "targets": [{"expr": "{namespace=\"vault-aio\", app=~\"$app\"} |~ \"(?i)($level)\" |~ \"$search\" | line_format \"{{.app}}: {{__line__}}\"", "refId": "A"}],
+      "title": "Filtered Logs (App: $app | Level: $level)",
+      "type": "logs"
+    },
+
+    {"gridPos": {"h": 1, "w": 24, "x": 0, "y": 16}, "id": 202, "title": "Logs by Service", "type": "row", "collapsed": true, "panels": [
+      {
+        "datasource": {"type": "loki", "uid": "loki"},
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 17},
+        "id": 20,
+        "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": true, "showCommonLabels": false, "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true},
+        "targets": [{"expr": "{namespace=\"vault-aio\", app=\"vault\"} |~ \"(?i)($level)\" | line_format \"{{__line__}}\"", "refId": "A"}],
+        "title": "Vault",
+        "type": "logs"
+      },
+      {
+        "datasource": {"type": "loki", "uid": "loki"},
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 17},
+        "id": 21,
+        "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": true, "showCommonLabels": false, "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true},
+        "targets": [{"expr": "{namespace=\"vault-aio\", app=\"prometheus\"} |~ \"(?i)($level)\" | line_format \"{{__line__}}\"", "refId": "A"}],
+        "title": "Prometheus",
+        "type": "logs"
+      },
+      {
+        "datasource": {"type": "loki", "uid": "loki"},
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 25},
+        "id": 22,
+        "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": true, "showCommonLabels": false, "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true},
+        "targets": [{"expr": "{namespace=\"vault-aio\", app=\"grafana\"} |~ \"(?i)($level)\" | line_format \"{{__line__}}\"", "refId": "A"}],
+        "title": "Grafana",
+        "type": "logs"
+      },
+      {
+        "datasource": {"type": "loki", "uid": "loki"},
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 25},
+        "id": 23,
+        "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": true, "showCommonLabels": false, "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true},
+        "targets": [{"expr": "{namespace=\"vault-aio\", app=\"loki\"} |~ \"(?i)($level)\" | line_format \"{{__line__}}\"", "refId": "A"}],
+        "title": "Loki",
+        "type": "logs"
+      },
+      {
+        "datasource": {"type": "loki", "uid": "loki"},
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 33},
+        "id": 24,
+        "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": true, "showCommonLabels": false, "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true},
+        "targets": [{"expr": "{namespace=\"vault-aio\", app=\"tempo\"} |~ \"(?i)($level)\" | line_format \"{{__line__}}\"", "refId": "A"}],
+        "title": "Tempo",
+        "type": "logs"
+      },
+      {
+        "datasource": {"type": "loki", "uid": "loki"},
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 33},
+        "id": 25,
+        "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": true, "showCommonLabels": false, "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true},
+        "targets": [{"expr": "{namespace=\"vault-aio\", app=\"alertmanager\"} |~ \"(?i)($level)\" | line_format \"{{__line__}}\"", "refId": "A"}],
+        "title": "Alertmanager",
+        "type": "logs"
+      },
+      {
+        "datasource": {"type": "loki", "uid": "loki"},
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 41},
+        "id": 26,
+        "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": true, "showCommonLabels": false, "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true},
+        "targets": [{"expr": "{namespace=\"vault-aio\", app=\"alloy\"} |~ \"(?i)($level)\" | line_format \"{{__line__}}\"", "refId": "A"}],
+        "title": "Alloy",
+        "type": "logs"
+      }
+    ]}
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "tags": ["logs", "all"],
+  "time": {"from": "now-1h", "to": "now"},
+  "title": "logs-all",
+  "uid": "logs-all",
+  "version": 1
+}

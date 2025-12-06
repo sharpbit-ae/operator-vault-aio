@@ -3,73 +3,84 @@
   "editable": true,
   "id": null,
   "links": [],
+  "templating": {
+    "list": [
+      {
+        "current": {"selected": true, "text": ["error", "warn", "info"], "value": ["error", "warn", "info"]},
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "name": "level",
+        "options": [
+          {"selected": false, "text": "All", "value": "$__all"},
+          {"selected": true, "text": "error", "value": "error"},
+          {"selected": true, "text": "warn", "value": "warn"},
+          {"selected": true, "text": "info", "value": "info"},
+          {"selected": false, "text": "debug", "value": "debug"}
+        ],
+        "query": "error,warn,info,debug",
+        "type": "custom"
+      }
+    ]
+  },
   "panels": [
-    {"gridPos": {"h": 2, "w": 24, "x": 0, "y": 0}, "id": 100, "options": {"content": "# Alloy Logs\nTelemetry collector - log shipping, metrics scraping, and host monitoring", "mode": "markdown"}, "title": "", "transparent": true, "type": "text"},
+    {"gridPos": {"h": 1, "w": 24, "x": 0, "y": 0}, "id": 100, "options": {"content": "# Alloy Logs | Level: $level"}, "title": "", "transparent": true, "type": "text"},
+    {"gridPos": {"h": 1, "w": 24, "x": 0, "y": 1}, "id": 200, "title": "Status", "type": "row"},
     {
       "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "mappings": [{"options": {"1": {"text": "UP", "color": "green"}, "0": {"text": "DOWN", "color": "red"}}, "type": "value"}], "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}},
-      "gridPos": {"h": 3, "w": 4, "x": 0, "y": 2},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "mappings": [{"options": {"1": {"text": "UP", "color": "green"}, "0": {"text": "DOWN", "color": "red"}}, "type": "value"}], "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}, "noValue": "DOWN"}},
+      "gridPos": {"h": 3, "w": 3, "x": 0, "y": 2},
       "id": 1,
-      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
       "targets": [{"expr": "up{job=\"integrations/unix\"}", "refId": "A"}],
       "title": "Status",
       "type": "stat"
     },
     {
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "short"}},
-      "gridPos": {"h": 3, "w": 5, "x": 4, "y": 2},
-      "id": 2,
-      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
-      "targets": [{"expr": "alloy_component_controller_running_components or vector(0)", "refId": "A"}],
-      "title": "Running Components",
-      "type": "stat"
-    },
-    {
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "ops"}},
-      "gridPos": {"h": 3, "w": 5, "x": 9, "y": 2},
+      "datasource": {"type": "loki", "uid": "loki"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}},
+      "gridPos": {"h": 3, "w": 3, "x": 3, "y": 2},
       "id": 3,
-      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
-      "targets": [{"expr": "rate(loki_write_sent_bytes_total[5m])", "refId": "A"}],
-      "title": "Logs Sent (Bps)",
-      "type": "stat"
-    },
-    {
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "short"}},
-      "gridPos": {"h": 3, "w": 5, "x": 14, "y": 2},
-      "id": 4,
-      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
-      "targets": [{"expr": "alloy_component_controller_evaluating_components or vector(0)", "refId": "A"}],
-      "title": "Evaluating",
-      "type": "stat"
-    },
-    {
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "bytes"}},
-      "gridPos": {"h": 3, "w": 5, "x": 19, "y": 2},
-      "id": 5,
-      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
-      "targets": [{"expr": "go_memstats_heap_inuse_bytes{job=\"integrations/unix\"}", "refId": "A"}],
-      "title": "Heap Memory",
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "reduceOptions": {"calcs": ["sum"]}, "textMode": "value"},
+      "targets": [{"expr": "count_over_time({namespace=\"vault-aio\", app=\"alloy\"} |~ \"(?i)error\" [$__range])", "refId": "A"}],
+      "title": "Errors",
       "type": "stat"
     },
     {
       "datasource": {"type": "loki", "uid": "loki"},
-      "gridPos": {"h": 18, "w": 24, "x": 0, "y": 5},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 5}]}}},
+      "gridPos": {"h": 3, "w": 3, "x": 6, "y": 2},
+      "id": 4,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "reduceOptions": {"calcs": ["sum"]}, "textMode": "value"},
+      "targets": [{"expr": "count_over_time({namespace=\"vault-aio\", app=\"alloy\"} |~ \"(?i)warn\" [$__range])", "refId": "A"}],
+      "title": "Warnings",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"drawStyle": "bars", "fillOpacity": 50}}},
+      "gridPos": {"h": 3, "w": 15, "x": 9, "y": 2},
+      "id": 5,
+      "targets": [{"expr": "count_over_time({namespace=\"vault-aio\", app=\"alloy\"} |~ \"(?i)($level)\" [$__interval])", "legendFormat": "logs", "refId": "A"}],
+      "title": "Log Volume",
+      "type": "timeseries"
+    },
+    {"gridPos": {"h": 1, "w": 24, "x": 0, "y": 5}, "id": 201, "title": "Logs", "type": "row"},
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 16, "w": 24, "x": 0, "y": 6},
       "id": 10,
-      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false},
-      "targets": [{"expr": "{namespace=\"vault-aio\", pod=~\"alloy.*\"}", "refId": "A"}],
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": true, "showCommonLabels": false, "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true},
+      "targets": [{"expr": "{namespace=\"vault-aio\", app=\"alloy\"} |~ \"(?i)($level)\"", "refId": "A"}],
       "title": "Alloy Logs",
       "type": "logs"
     }
   ],
-  "refresh": "10s",
+  "refresh": "30s",
   "schemaVersion": 38,
   "tags": ["logs", "alloy"],
   "time": {"from": "now-1h", "to": "now"},
   "title": "logs-alloy",
   "uid": "logs-alloy",
-  "version": 1
+  "version": 2
 }
