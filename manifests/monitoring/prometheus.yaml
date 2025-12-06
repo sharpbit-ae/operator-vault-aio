@@ -1,0 +1,300 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: vault-aio
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets:
+                - alertmanager:9093
+
+    rule_files:
+      - /etc/prometheus/rules/*.yml
+
+    scrape_configs:
+      # Prometheus self-monitoring
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+
+      # Vault metrics
+      - job_name: 'vault'
+        metrics_path: /v1/sys/metrics
+        params:
+          format: ['prometheus']
+        static_configs:
+          - targets: ['vault:8200']
+        # Vault requires token for metrics when ACL enabled
+        # bearer_token_file: /etc/prometheus/vault-token
+
+      # Node exporter (VM metrics via Alloy)
+      - job_name: 'node'
+        static_configs:
+          - targets: ['alloy:9100']
+
+      # Loki metrics
+      - job_name: 'loki'
+        static_configs:
+          - targets: ['loki:3100']
+
+      # Tempo metrics
+      - job_name: 'tempo'
+        static_configs:
+          - targets: ['tempo:3200']
+
+      # Alertmanager metrics
+      - job_name: 'alertmanager'
+        static_configs:
+          - targets: ['alertmanager:9093']
+
+      # Alloy metrics
+      - job_name: 'alloy'
+        static_configs:
+          - targets: ['alloy:12345']
+
+      # Kubernetes pod metrics
+      - job_name: 'kubernetes-pods'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - vault-aio
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: pod
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-rules
+  namespace: vault-aio
+data:
+  vault-alerts.yml: |
+    groups:
+      - name: vault
+        rules:
+          - alert: VaultSealed
+            expr: vault_core_unsealed == 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Vault is sealed"
+              description: "Vault has been sealed for more than 1 minute"
+
+          - alert: VaultDown
+            expr: up{job="vault"} == 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Vault is down"
+              description: "Vault instance is not responding"
+
+          - alert: VaultHighTokenCreation
+            expr: rate(vault_token_create_count[5m]) > 100
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High token creation rate"
+              description: "Token creation rate is {{ $value }} per second"
+
+          - alert: VaultAuthFailures
+            expr: rate(vault_core_handle_request{error="true"}[5m]) > 10
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High authentication failure rate"
+              description: "Authentication failures: {{ $value }} per second"
+
+          - alert: VaultLeadershipLoss
+            expr: changes(vault_core_leadership_setup_failed[1h]) > 0
+            for: 1m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Vault leadership changes detected"
+              description: "Vault cluster has experienced leadership changes"
+
+      - name: infrastructure
+        rules:
+          - alert: HighMemoryUsage
+            expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.9
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High memory usage"
+              description: "Memory usage is above 90%"
+
+          - alert: HighDiskUsage
+            expr: (1 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})) > 0.85
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High disk usage"
+              description: "Disk usage is above 85%"
+
+          - alert: HighCPUUsage
+            expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High CPU usage"
+              description: "CPU usage is above 80%"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: vault-aio
+  labels:
+    app: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      serviceAccountName: prometheus
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        fsGroup: 65534
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v2.48.0
+          args:
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.path=/prometheus
+            - --storage.tsdb.retention.time=15d
+            - --web.enable-lifecycle
+            - --web.enable-remote-write-receiver
+          ports:
+            - containerPort: 9090
+              name: http
+          volumeMounts:
+            - name: config
+              mountPath: /etc/prometheus/prometheus.yml
+              subPath: prometheus.yml
+            - name: rules
+              mountPath: /etc/prometheus/rules
+            - name: data
+              mountPath: /prometheus
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 9090
+            initialDelaySeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 9090
+            initialDelaySeconds: 5
+      volumes:
+        - name: config
+          configMap:
+            name: prometheus-config
+        - name: rules
+          configMap:
+            name: prometheus-rules
+        - name: data
+          persistentVolumeClaim:
+            claimName: prometheus-data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-data
+  namespace: vault-aio
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: vault-aio
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9090
+      targetPort: 9090
+      name: http
+  selector:
+    app: prometheus
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: vault-aio
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus-vault-aio
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "nodes", "services", "endpoints"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get"]
+  - nonResourceURLs: ["/metrics"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus-vault-aio
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus-vault-aio
+subjects:
+  - kind: ServiceAccount
+    name: prometheus
+    namespace: vault-aio

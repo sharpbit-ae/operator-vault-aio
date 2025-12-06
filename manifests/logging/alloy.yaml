@@ -1,0 +1,376 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alloy-config
+  namespace: vault-aio
+data:
+  config.alloy: |
+    // Alloy configuration for Vault AIO
+    // Collects: container logs, VM system logs, metrics, traces
+
+    logging {
+      level = "info"
+      format = "logfmt"
+    }
+
+    // ============================================
+    // CONTAINER LOG COLLECTION
+    // ============================================
+
+    // Discover all pods in vault-aio namespace
+    discovery.kubernetes "pods" {
+      role = "pod"
+      namespaces {
+        names = ["vault-aio"]
+      }
+    }
+
+    // Relabel discovered pods
+    discovery.relabel "pods" {
+      targets = discovery.kubernetes.pods.targets
+
+      rule {
+        source_labels = ["__meta_kubernetes_pod_name"]
+        target_label  = "pod"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_namespace"]
+        target_label  = "namespace"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_container_name"]
+        target_label  = "container"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_app"]
+        target_label  = "app"
+      }
+    }
+
+    // Collect container logs
+    loki.source.kubernetes "pods" {
+      targets    = discovery.relabel.pods.output
+      forward_to = [loki.process.container_logs.receiver]
+    }
+
+    // Process container logs
+    loki.process "container_logs" {
+      stage.json {
+        expressions = {
+          level = "level",
+          msg   = "msg",
+          time  = "time",
+        }
+      }
+
+      stage.labels {
+        values = {
+          level = "",
+        }
+      }
+
+      stage.static_labels {
+        values = {
+          source = "container",
+        }
+      }
+
+      forward_to = [loki.write.default.receiver]
+    }
+
+    // ============================================
+    // VM SYSTEM LOG COLLECTION
+    // ============================================
+
+    // Collect VM system logs from journal
+    loki.source.journal "system" {
+      forward_to = [loki.process.system_logs.receiver]
+      relabel_rules = loki.relabel.journal.rules
+      labels = {
+        job = "systemd-journal",
+        source = "vm",
+      }
+    }
+
+    loki.relabel "journal" {
+      forward_to = []
+
+      rule {
+        source_labels = ["__journal__systemd_unit"]
+        target_label  = "unit"
+      }
+      rule {
+        source_labels = ["__journal__hostname"]
+        target_label  = "hostname"
+      }
+      rule {
+        source_labels = ["__journal_priority_keyword"]
+        target_label  = "level"
+      }
+    }
+
+    // Process system logs
+    loki.process "system_logs" {
+      stage.static_labels {
+        values = {
+          source = "vm",
+          component = "system",
+        }
+      }
+
+      forward_to = [loki.write.default.receiver]
+    }
+
+    // Collect VM syslog files
+    local.file_match "syslog" {
+      path_targets = [
+        {__path__ = "/var/log/syslog", job = "syslog"},
+        {__path__ = "/var/log/auth.log", job = "auth"},
+        {__path__ = "/var/log/kern.log", job = "kernel"},
+      ]
+    }
+
+    loki.source.file "syslog" {
+      targets    = local.file_match.syslog.targets
+      forward_to = [loki.process.syslog.receiver]
+    }
+
+    loki.process "syslog" {
+      stage.static_labels {
+        values = {
+          source = "vm",
+        }
+      }
+
+      forward_to = [loki.write.default.receiver]
+    }
+
+    // ============================================
+    // METRICS COLLECTION (Node Exporter style)
+    // ============================================
+
+    prometheus.exporter.unix "node" {
+      disable_collectors = ["arp", "bcache", "bonding", "btrfs", "conntrack", "fibrechannel", "infiniband", "ipvs", "nfs", "nfsd", "nvme", "powersupplyclass", "pressure", "rapl", "schedstat", "tapestats", "thermal_zone", "xfs", "zfs"]
+      enable_collectors = ["cpu", "diskstats", "filesystem", "loadavg", "meminfo", "netdev", "os", "uname", "vmstat", "time"]
+    }
+
+    prometheus.scrape "node" {
+      targets    = prometheus.exporter.unix.node.targets
+      forward_to = [prometheus.remote_write.default.receiver]
+      scrape_interval = "15s"
+    }
+
+    // ============================================
+    // TRACE COLLECTION (OTLP)
+    // ============================================
+
+    otelcol.receiver.otlp "default" {
+      grpc {
+        endpoint = "0.0.0.0:4317"
+      }
+      http {
+        endpoint = "0.0.0.0:4318"
+      }
+
+      output {
+        traces = [otelcol.exporter.otlp.tempo.input]
+      }
+    }
+
+    otelcol.exporter.otlp "tempo" {
+      client {
+        endpoint = "tempo:4317"
+        tls {
+          insecure = true
+        }
+      }
+    }
+
+    // ============================================
+    // OUTPUTS
+    // ============================================
+
+    loki.write "default" {
+      endpoint {
+        url = "http://loki:3100/loki/api/v1/push"
+      }
+    }
+
+    prometheus.remote_write "default" {
+      endpoint {
+        url = "http://prometheus:9090/api/v1/write"
+      }
+    }
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: alloy
+  namespace: vault-aio
+  labels:
+    app: alloy
+spec:
+  selector:
+    matchLabels:
+      app: alloy
+  template:
+    metadata:
+      labels:
+        app: alloy
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "12345"
+    spec:
+      serviceAccountName: alloy
+      hostPID: true
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+        - name: alloy
+          image: grafana/alloy:v1.0.0
+          args:
+            - run
+            - /etc/alloy/config.alloy
+            - --server.http.listen-addr=0.0.0.0:12345
+            - --storage.path=/var/lib/alloy/data
+          ports:
+            - containerPort: 12345
+              name: http
+            - containerPort: 4317
+              name: otlp-grpc
+            - containerPort: 4318
+              name: otlp-http
+            - containerPort: 9100
+              name: node-exporter
+          env:
+            - name: HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          securityContext:
+            privileged: true
+            runAsUser: 0
+          volumeMounts:
+            - name: config
+              mountPath: /etc/alloy
+            - name: varlog
+              mountPath: /var/log
+              readOnly: true
+            - name: journal
+              mountPath: /var/log/journal
+              readOnly: true
+            - name: machine-id
+              mountPath: /etc/machine-id
+              readOnly: true
+            - name: containers
+              mountPath: /var/lib/docker/containers
+              readOnly: true
+            - name: pods
+              mountPath: /var/log/pods
+              readOnly: true
+            - name: data
+              mountPath: /var/lib/alloy/data
+            - name: proc
+              mountPath: /host/proc
+              readOnly: true
+            - name: sys
+              mountPath: /host/sys
+              readOnly: true
+            - name: root
+              mountPath: /host/root
+              readOnly: true
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "50m"
+            limits:
+              memory: "512Mi"
+              cpu: "250m"
+      tolerations:
+        - operator: Exists
+      volumes:
+        - name: config
+          configMap:
+            name: alloy-config
+        - name: varlog
+          hostPath:
+            path: /var/log
+        - name: journal
+          hostPath:
+            path: /var/log/journal
+        - name: machine-id
+          hostPath:
+            path: /etc/machine-id
+        - name: containers
+          hostPath:
+            path: /var/lib/docker/containers
+        - name: pods
+          hostPath:
+            path: /var/log/pods
+        - name: data
+          hostPath:
+            path: /var/lib/alloy/data
+            type: DirectoryOrCreate
+        - name: proc
+          hostPath:
+            path: /proc
+        - name: sys
+          hostPath:
+            path: /sys
+        - name: root
+          hostPath:
+            path: /
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alloy
+  namespace: vault-aio
+spec:
+  type: ClusterIP
+  ports:
+    - port: 12345
+      targetPort: 12345
+      name: http
+    - port: 4317
+      targetPort: 4317
+      name: otlp-grpc
+    - port: 4318
+      targetPort: 4318
+      name: otlp-http
+    - port: 9100
+      targetPort: 9100
+      name: node-exporter
+  selector:
+    app: alloy
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: alloy
+  namespace: vault-aio
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: alloy-vault-aio
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "nodes", "nodes/proxy", "services", "endpoints", "namespaces"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["daemonsets", "deployments", "replicasets", "statefulsets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: alloy-vault-aio
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: alloy-vault-aio
+subjects:
+  - kind: ServiceAccount
+    name: alloy
+    namespace: vault-aio

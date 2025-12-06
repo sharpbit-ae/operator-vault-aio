@@ -1,0 +1,20 @@
+# Secrets - never commit these
+vault-init-keys.json
+*.key
+*.pem
+*.crt
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp files
+*.tmp
+*.bak

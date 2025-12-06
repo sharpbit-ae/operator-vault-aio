@@ -1,0 +1,33 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: vault-aio
+
+resources:
+  - namespace.yaml
+  # Vault
+  - vault/vault-config.yaml
+  - vault/vault-deployment.yaml
+  # Monitoring
+  - monitoring/prometheus.yaml
+  - monitoring/grafana.yaml
+  - monitoring/alertmanager.yaml
+  # Logging
+  - logging/loki.yaml
+  - logging/alloy.yaml
+  # Tracing
+  - tracing/tempo.yaml
+  # NTP
+  - ntp/chrony.yaml
+  # Network Policies
+  - network-policies/default-deny.yaml
+  - network-policies/vault-policy.yaml
+  - network-policies/monitoring-policy.yaml
+  - network-policies/logging-policy.yaml
+  - network-policies/tracing-ntp-policy.yaml
+  # Dashboards
+  - dashboards/configmap.yaml
+
+commonLabels:
+  app.kubernetes.io/part-of: vault-aio
+  app.kubernetes.io/managed-by: kustomize
