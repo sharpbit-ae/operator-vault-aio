@@ -277,35 +277,46 @@ data:
     # Get ArgoCD initial admin password (set by ArgoCD installation)
     ARGOCD_PASSWORD=$(kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath='{.data.password}' | base64 -d)
 
-    # Store all passwords in Vault
+    # Store all passwords in Vault (each secret includes its URL)
+    vault kv put secret/homepage \
+      url="https://vault-aio.local" \
+      description="Vault AIO Dashboard Homepage"
+
     vault kv put secret/grafana \
+      url="https://grafana.vault-aio.local" \
       username=admin \
       password="$GRAFANA_PASSWORD"
 
     vault kv put secret/prometheus \
+      url="https://prometheus.vault-aio.local" \
       username=admin \
       password="$PROMETHEUS_PASSWORD"
 
     vault kv put secret/alertmanager \
+      url="https://alertmanager.vault-aio.local" \
       username=admin \
       password="$ALERTMANAGER_PASSWORD"
 
     vault kv put secret/loki \
+      url="https://loki.vault-aio.local" \
       username=admin \
       password="$LOKI_PASSWORD"
 
     vault kv put secret/tempo \
+      url="https://tempo.vault-aio.local" \
       username=admin \
       password="$TEMPO_PASSWORD"
 
     vault kv put secret/argocd \
+      url="https://argocd.vault-aio.local" \
       username=admin \
       password="$ARGOCD_PASSWORD"
 
     vault kv put secret/vault \
+      url="https://vault.vault-aio.local" \
       token="root"
 
-    # Store all URLs
+    # Store all URLs in a single secret for convenience
     vault kv put secret/urls \
       homepage="https://vault-aio.local" \
       vault="https://vault.vault-aio.local" \
@@ -469,15 +480,16 @@ data:
     echo "Intermediate CA: pki_int/"
     echo "ACME Endpoint: ${VAULT_ADDR}/v1/pki_int/acme/directory"
     echo ""
-    echo "Secrets stored in Vault:"
-    echo "  - secret/grafana"
-    echo "  - secret/prometheus"
-    echo "  - secret/alertmanager"
-    echo "  - secret/loki"
-    echo "  - secret/tempo"
-    echo "  - secret/argocd"
-    echo "  - secret/vault"
-    echo "  - secret/urls"
+    echo "Secrets stored in Vault (each includes URL):"
+    echo "  - secret/homepage    (url, description)"
+    echo "  - secret/grafana     (url, username, password)"
+    echo "  - secret/prometheus  (url, username, password)"
+    echo "  - secret/alertmanager (url, username, password)"
+    echo "  - secret/loki        (url, username, password)"
+    echo "  - secret/tempo       (url, username, password)"
+    echo "  - secret/argocd      (url, username, password)"
+    echo "  - secret/vault       (url, token)"
+    echo "  - secret/urls        (all URLs consolidated)"
     echo ""
     echo "Kubernetes secrets created:"
     echo "  - vault-aio/vault-app-passwords (all passwords)"
