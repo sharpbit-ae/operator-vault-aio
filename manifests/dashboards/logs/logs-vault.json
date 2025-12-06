@@ -6,16 +6,16 @@
   "templating": {
     "list": [
       {
-        "current": {"selected": true, "text": ["error", "warn", "info"], "value": ["error", "warn", "info"]},
+        "current": {"selected": false, "text": "All", "value": "$__all"},
         "hide": 0,
         "includeAll": true,
         "multi": true,
         "name": "level",
         "options": [
-          {"selected": false, "text": "All", "value": "$__all"},
-          {"selected": true, "text": "error", "value": "error"},
-          {"selected": true, "text": "warn", "value": "warn"},
-          {"selected": true, "text": "info", "value": "info"},
+          {"selected": true, "text": "All", "value": "$__all"},
+          {"selected": false, "text": "error", "value": "error"},
+          {"selected": false, "text": "warn", "value": "warn"},
+          {"selected": false, "text": "info", "value": "info"},
           {"selected": false, "text": "debug", "value": "debug"}
         ],
         "query": "error,warn,info,debug",
@@ -25,7 +25,6 @@
   },
   "panels": [
     {"gridPos": {"h": 1, "w": 24, "x": 0, "y": 0}, "id": 100, "options": {"content": "# Vault Logs | Level: $level"}, "title": "", "transparent": true, "type": "text"},
-
     {"gridPos": {"h": 1, "w": 24, "x": 0, "y": 1}, "id": 200, "title": "Status", "type": "row"},
     {
       "datasource": {"type": "prometheus", "uid": "prometheus"},
@@ -53,7 +52,7 @@
       "gridPos": {"h": 3, "w": 3, "x": 6, "y": 2},
       "id": 3,
       "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "reduceOptions": {"calcs": ["sum"]}, "textMode": "value"},
-      "targets": [{"expr": "count_over_time({namespace=\"vault-aio\", app=\"vault\"} |~ \"(?i)error\" [$__range])", "refId": "A"}],
+      "targets": [{"expr": "count_over_time({namespace=\"vault-aio\", pod=~\"vault.*\"} |~ \"(?i)error\" [$__range])", "refId": "A"}],
       "title": "Errors",
       "type": "stat"
     },
@@ -63,7 +62,7 @@
       "gridPos": {"h": 3, "w": 3, "x": 9, "y": 2},
       "id": 4,
       "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "reduceOptions": {"calcs": ["sum"]}, "textMode": "value"},
-      "targets": [{"expr": "count_over_time({namespace=\"vault-aio\", app=\"vault\"} |~ \"(?i)warn\" [$__range])", "refId": "A"}],
+      "targets": [{"expr": "count_over_time({namespace=\"vault-aio\", pod=~\"vault.*\"} |~ \"(?i)warn\" [$__range])", "refId": "A"}],
       "title": "Warnings",
       "type": "stat"
     },
@@ -72,18 +71,17 @@
       "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"drawStyle": "bars", "fillOpacity": 50}}},
       "gridPos": {"h": 3, "w": 12, "x": 12, "y": 2},
       "id": 5,
-      "targets": [{"expr": "count_over_time({namespace=\"vault-aio\", app=\"vault\"} |~ \"(?i)($level)\" [$__interval])", "legendFormat": "logs", "refId": "A"}],
+      "targets": [{"expr": "count_over_time({namespace=\"vault-aio\", pod=~\"vault.*\"} [$__interval])", "legendFormat": "logs", "refId": "A"}],
       "title": "Log Volume",
       "type": "timeseries"
     },
-
     {"gridPos": {"h": 1, "w": 24, "x": 0, "y": 5}, "id": 201, "title": "Logs", "type": "row"},
     {
       "datasource": {"type": "loki", "uid": "loki"},
       "gridPos": {"h": 16, "w": 24, "x": 0, "y": 6},
       "id": 10,
       "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": true, "showCommonLabels": false, "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true},
-      "targets": [{"expr": "{namespace=\"vault-aio\", app=\"vault\"} |~ \"(?i)($level)\" | line_format \"{{__line__}}\"", "refId": "A"}],
+      "targets": [{"expr": "{namespace=\"vault-aio\", pod=~\"vault.*\"}", "refId": "A"}],
       "title": "Vault Logs",
       "type": "logs"
     }
@@ -94,5 +92,5 @@
   "time": {"from": "now-1h", "to": "now"},
   "title": "logs-vault",
   "uid": "logs-vault",
-  "version": 2
+  "version": 3
 }

@@ -69,7 +69,7 @@ data:
           "gridPos": {"h": 3, "w": 4, "x": 0, "y": 2},
           "id": 1,
           "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "reduceOptions": {"calcs": ["sum"]}, "textMode": "value"},
-          "targets": [{"expr": "sum(count_over_time({namespace=\"vault-aio\", app=~\"$app\"} |~ \"(?i)error\" [$__range]))", "refId": "A"}],
+          "targets": [{"expr": "sum(count_over_time({namespace=\"vault-aio\", pod=~\"$app.*\"} |~ \"(?i)error\" [$__range]))", "refId": "A"}],
           "title": "Errors",
           "type": "stat"
         },
@@ -79,7 +79,7 @@ data:
           "gridPos": {"h": 3, "w": 4, "x": 4, "y": 2},
           "id": 2,
           "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "reduceOptions": {"calcs": ["sum"]}, "textMode": "value"},
-          "targets": [{"expr": "sum(count_over_time({namespace=\"vault-aio\", app=~\"$app\"} |~ \"(?i)warn\" !~ \"(?i)error\" [$__range]))", "refId": "A"}],
+          "targets": [{"expr": "sum(count_over_time({namespace=\"vault-aio\", pod=~\"$app.*\"} |~ \"(?i)warn\" !~ \"(?i)error\" [$__range]))", "refId": "A"}],
           "title": "Warnings",
           "type": "stat"
         },
@@ -89,7 +89,7 @@ data:
           "gridPos": {"h": 3, "w": 4, "x": 8, "y": 2},
           "id": 3,
           "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "center", "reduceOptions": {"calcs": ["sum"]}, "textMode": "value"},
-          "targets": [{"expr": "sum(count_over_time({namespace=\"vault-aio\", app=~\"$app\"} [$__range]))", "refId": "A"}],
+          "targets": [{"expr": "sum(count_over_time({namespace=\"vault-aio\", pod=~\"$app.*\"} [$__range]))", "refId": "A"}],
           "title": "Total Lines",
           "type": "stat"
         },

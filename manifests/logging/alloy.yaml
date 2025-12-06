@@ -41,8 +41,27 @@ data:
         source_labels = ["__meta_kubernetes_pod_container_name"]
         target_label  = "container"
       }
+      // Try app label first
       rule {
         source_labels = ["__meta_kubernetes_pod_label_app"]
+        target_label  = "app"
+      }
+      // Fallback: use app.kubernetes.io/name if app label is empty
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+        regex         = "(.+)"
+        target_label  = "app"
+      }
+      // Fallback: extract app name from pod name (first segment before -)
+      rule {
+        source_labels = ["__meta_kubernetes_pod_name"]
+        regex         = "([^-]+).*"
+        target_label  = "__tmp_app"
+      }
+      rule {
+        source_labels = ["app", "__tmp_app"]
+        regex         = "^;(.+)$"
+        replacement   = "$1"
         target_label  = "app"
       }
     }
@@ -53,22 +72,8 @@ data:
       forward_to = [loki.process.container_logs.receiver]
     }
 
-    // Process container logs
+    // Process container logs - keep it simple, don't drop any logs
     loki.process "container_logs" {
-      stage.json {
-        expressions = {
-          level = "level",
-          msg   = "msg",
-          time  = "time",
-        }
-      }
-
-      stage.labels {
-        values = {
-          level = "",
-        }
-      }
-
       stage.static_labels {
         values = {
           source = "container",
