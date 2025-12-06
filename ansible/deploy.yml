@@ -30,8 +30,8 @@
         vm_disk_size_gb: 100  # Larger for logs/metrics storage
         vm_user: "aeonuser"
         vm_user_password: "changeme123"
-        vm_ssh_pubkey: "{{ lookup('file', lookup('env', 'HOME') + '/.ssh/id_rsa.pub') }}"
-        vm_ssh_key_path: "{{ lookup('env', 'HOME') }}/.ssh/id_rsa"
+        vm_ssh_pubkey: "{{ lookup('file', playbook_dir + '/vault-aio-key.pub') }}"
+        vm_ssh_key_path: "{{ playbook_dir }}/vault-aio-key"
         create_network: false  # Network already exists
 
 # Step 2-4: Configure Vault AIO VM

@@ -10,7 +10,7 @@ all:
         vault-aio:
           ansible_host: 10.0.0.20
           ansible_user: aeonuser
-          ansible_ssh_private_key_file: /home/aeonadmin/.ssh/id_rsa
+          ansible_ssh_private_key_file: "{{ playbook_dir }}/vault-aio-key"
       vars:
         vm_role: vault-aio
         vm_type: vault_standalone
