@@ -41,12 +41,13 @@ data:
     # Minimum number of selectable sources required to update clock
     minsources 2
 
-    # Specify directory for Unix domain command socket
-    cmdport 0
+    # Enable command port for chrony-exporter
+    cmdport 323
 
-    # Disable command access from network (only local)
+    # Allow command access only from localhost
     bindcmdaddress 127.0.0.1
     bindcmdaddress ::1
+    cmdallow 127.0.0.1
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -102,8 +103,20 @@ spec:
             limits:
               memory: "64Mi"
               cpu: "50m"
-        # Chrony exporter for Prometheus (removed - image not available)
-        # NTP synchronization will be handled by the chrony container itself
+        - name: chrony-exporter
+          image: quay.io/superq/chrony-exporter:v0.9.2
+          args:
+            - --chrony.address=127.0.0.1:323
+          ports:
+            - containerPort: 9123
+              name: metrics
+          resources:
+            requests:
+              memory: "16Mi"
+              cpu: "5m"
+            limits:
+              memory: "32Mi"
+              cpu: "20m"
       volumes:
         - name: config
           configMap:

@@ -52,10 +52,57 @@ data:
         static_configs:
           - targets: ['alertmanager:9093']
 
-      # Alloy metrics
+      # Alloy metrics (hostNetwork DaemonSet)
       - job_name: 'alloy'
-        static_configs:
-          - targets: ['alloy:12345']
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - vault-aio
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: alloy
+          - source_labels: [__meta_kubernetes_pod_ip]
+            action: replace
+            target_label: __address__
+            regex: (.+)
+            replacement: $1:12345
+
+      # Host metrics from Alloy (unix integration)
+      - job_name: 'integrations/unix'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - vault-aio
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: alloy
+          - source_labels: [__meta_kubernetes_pod_ip]
+            action: replace
+            target_label: __address__
+            regex: (.+)
+            replacement: $1:12345
+        metrics_path: /api/v0/component/prometheus.exporter.unix.node/metrics
+
+      # Chrony NTP metrics
+      - job_name: 'chrony'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - vault-aio
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: chrony
+          - source_labels: [__meta_kubernetes_pod_ip]
+            action: replace
+            target_label: __address__
+            regex: (.+)
+            replacement: $1:9123
 
       # Kubernetes pod metrics
       - job_name: 'kubernetes-pods'
