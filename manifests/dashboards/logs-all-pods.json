@@ -1,0 +1,86 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "gridPos": {"h": 2, "w": 24, "x": 0, "y": 0},
+      "id": 100,
+      "options": {"content": "# All Pod Logs\nFilter by severity, search text, or select specific pods using the dropdowns", "mode": "markdown"},
+      "title": "",
+      "transparent": true,
+      "type": "text"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 2},
+      "id": 1,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false},
+      "targets": [{"expr": "{namespace=\"vault-aio\", pod=~\"vault.*\"}", "legendFormat": "", "refId": "A"}],
+      "title": "Vault",
+      "type": "logs"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 8},
+      "id": 2,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false},
+      "targets": [{"expr": "{namespace=\"vault-aio\", pod=~\"prometheus.*\"}", "legendFormat": "", "refId": "A"}],
+      "title": "Prometheus",
+      "type": "logs"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 8},
+      "id": 3,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false},
+      "targets": [{"expr": "{namespace=\"vault-aio\", pod=~\"grafana.*\"}", "legendFormat": "", "refId": "A"}],
+      "title": "Grafana",
+      "type": "logs"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 14},
+      "id": 4,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false},
+      "targets": [{"expr": "{namespace=\"vault-aio\", pod=~\"loki.*\"}", "legendFormat": "", "refId": "A"}],
+      "title": "Loki",
+      "type": "logs"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 14},
+      "id": 5,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false},
+      "targets": [{"expr": "{namespace=\"vault-aio\", pod=~\"tempo.*\"}", "legendFormat": "", "refId": "A"}],
+      "title": "Tempo",
+      "type": "logs"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 20},
+      "id": 6,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false},
+      "targets": [{"expr": "{namespace=\"vault-aio\", pod=~\"alertmanager.*\"}", "legendFormat": "", "refId": "A"}],
+      "title": "Alertmanager",
+      "type": "logs"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 20},
+      "id": 7,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false},
+      "targets": [{"expr": "{namespace=\"vault-aio\", pod=~\"alloy.*\"}", "legendFormat": "", "refId": "A"}],
+      "title": "Alloy",
+      "type": "logs"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "tags": ["logs", "pods"],
+  "time": {"from": "now-1h", "to": "now"},
+  "title": "logs-all-pods",
+  "uid": "logs-all-pods",
+  "version": 1
+}

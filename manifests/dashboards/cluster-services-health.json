@@ -231,7 +231,7 @@
   "time": {"from": "now-1h", "to": "now"},
   "timepicker": {},
   "timezone": "",
-  "title": "Services Health",
-  "uid": "services-health",
+  "title": "cluster-services-health",
+  "uid": "cluster-services-health",
   "version": 1
 }

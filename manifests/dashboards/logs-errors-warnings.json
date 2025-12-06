@@ -1,0 +1,60 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "gridPos": {"h": 2, "w": 24, "x": 0, "y": 0},
+      "id": 100,
+      "options": {"content": "# Errors & Warnings\nFiltered view showing only error, warning, and failure messages across all pods", "mode": "markdown"},
+      "title": "",
+      "transparent": true,
+      "type": "text"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}}},
+      "gridPos": {"h": 4, "w": 24, "x": 0, "y": 2},
+      "id": 1,
+      "options": {"legend": {"displayMode": "list", "placement": "right"}, "tooltip": {"mode": "single"}},
+      "targets": [{"expr": "sum by (pod) (count_over_time({namespace=\"vault-aio\"} |~ \"(?i)error|fail|exception\" [5m]))", "legendFormat": "{{pod}}", "refId": "A"}],
+      "title": "Error Rate by Pod (5m)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 6},
+      "id": 2,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false},
+      "targets": [{"expr": "{namespace=\"vault-aio\"} |~ \"(?i)error|ERROR\"", "legendFormat": "", "refId": "A"}],
+      "title": "ERRORS",
+      "type": "logs"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 14},
+      "id": 3,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false},
+      "targets": [{"expr": "{namespace=\"vault-aio\"} |~ \"(?i)warn|WARN\"", "legendFormat": "", "refId": "A"}],
+      "title": "WARNINGS",
+      "type": "logs"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 22},
+      "id": 4,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false},
+      "targets": [{"expr": "{namespace=\"vault-aio\"} |~ \"(?i)fail|FAIL|exception|panic|fatal\"", "legendFormat": "", "refId": "A"}],
+      "title": "FAILURES & EXCEPTIONS",
+      "type": "logs"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "tags": ["logs", "errors", "troubleshooting"],
+  "time": {"from": "now-1h", "to": "now"},
+  "title": "logs-errors-warnings",
+  "uid": "logs-errors-warnings",
+  "version": 1
+}

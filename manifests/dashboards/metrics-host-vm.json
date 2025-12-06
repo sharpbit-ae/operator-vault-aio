@@ -276,7 +276,7 @@
   "time": {"from": "now-1h", "to": "now"},
   "timepicker": {},
   "timezone": "",
-  "title": "VM System Metrics",
-  "uid": "vm-system",
+  "title": "metrics-host-vm",
+  "uid": "metrics-host-vm",
   "version": 1
 }

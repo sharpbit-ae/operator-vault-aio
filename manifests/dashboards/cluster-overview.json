@@ -383,7 +383,7 @@
   "time": {"from": "now-1h", "to": "now"},
   "timepicker": {},
   "timezone": "",
-  "title": "Kubernetes Cluster Overview",
-  "uid": "k8s-cluster",
+  "title": "cluster-overview",
+  "uid": "cluster-overview",
   "version": 1
 }
