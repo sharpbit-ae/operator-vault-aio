@@ -1,0 +1,196 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "id": null,
+  "links": [],
+  "panels": [
+    {"gridPos": {"h": 2, "w": 24, "x": 0, "y": 0}, "id": 100, "options": {"content": "# Login & Authentication Tracking\nSSH access, Vault authentication, and security events", "mode": "markdown"}, "title": "", "transparent": true, "type": "text"},
+
+    {"gridPos": {"h": 1, "w": 24, "x": 0, "y": 2}, "id": 200, "title": "🔑 Vault Authentication", "type": "row"},
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "short"}},
+      "gridPos": {"h": 3, "w": 4, "x": 0, "y": 3},
+      "id": 1,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "vault_token_count{job=\"vault\"}", "refId": "A"}],
+      "title": "Active Tokens",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "ops"}},
+      "gridPos": {"h": 3, "w": 4, "x": 4, "y": 3},
+      "id": 2,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "rate(vault_token_create_count[5m])", "refId": "A"}],
+      "title": "Token Creates/s",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "ops"}},
+      "gridPos": {"h": 3, "w": 4, "x": 8, "y": 3},
+      "id": 3,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "rate(vault_token_lookup_count[5m])", "refId": "A"}],
+      "title": "Token Lookups/s",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "ops"}},
+      "gridPos": {"h": 3, "w": 4, "x": 12, "y": 3},
+      "id": 4,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "rate(vault_token_revoke_count[5m])", "refId": "A"}],
+      "title": "Token Revokes/s",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 0.01}]}, "unit": "ops"}},
+      "gridPos": {"h": 3, "w": 4, "x": 16, "y": 3},
+      "id": 5,
+      "options": {"colorMode": "background", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "rate(vault_core_handle_login_request{error=\"true\"}[5m]) or vector(0)", "refId": "A"}],
+      "title": "Failed Logins/s",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "ops"}},
+      "gridPos": {"h": 3, "w": 4, "x": 20, "y": 3},
+      "id": 6,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "rate(vault_core_handle_login_request[5m])", "refId": "A"}],
+      "title": "Login Requests/s",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "pointSize": 5, "showPoints": "never"}, "unit": "ops"}},
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 6},
+      "id": 7,
+      "targets": [
+        {"expr": "rate(vault_token_create_count[5m])", "legendFormat": "Token Create", "refId": "A"},
+        {"expr": "rate(vault_token_revoke_count[5m])", "legendFormat": "Token Revoke", "refId": "B"},
+        {"expr": "rate(vault_token_lookup_count[5m])", "legendFormat": "Token Lookup", "refId": "C"}
+      ],
+      "title": "Vault Token Operations",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "pointSize": 5, "showPoints": "never"}, "unit": "ops"}},
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 6},
+      "id": 8,
+      "targets": [
+        {"expr": "rate(vault_core_handle_login_request[5m])", "legendFormat": "Login Requests", "refId": "A"},
+        {"expr": "rate(vault_core_handle_login_request{error=\"true\"}[5m])", "legendFormat": "Failed Logins", "refId": "B"}
+      ],
+      "title": "Vault Login Requests",
+      "type": "timeseries"
+    },
+
+    {"gridPos": {"h": 1, "w": 24, "x": 0, "y": 12}, "id": 201, "title": "🖥️ SSH & System Authentication", "type": "row"},
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "short"}},
+      "gridPos": {"h": 3, "w": 4, "x": 0, "y": 13},
+      "id": 10,
+      "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "node_procs_running{job=\"integrations/unix\"}", "refId": "A"}],
+      "title": "Running Procs",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "short"}},
+      "gridPos": {"h": 3, "w": 4, "x": 4, "y": 13},
+      "id": 11,
+      "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "node_sockstat_TCP_alloc{job=\"integrations/unix\"}", "refId": "A"}],
+      "title": "TCP Connections",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "short"}},
+      "gridPos": {"h": 3, "w": 4, "x": 8, "y": 13},
+      "id": 12,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "node_filefd_allocated{job=\"integrations/unix\"}", "refId": "A"}],
+      "title": "Open Files",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "short"}},
+      "gridPos": {"h": 3, "w": 4, "x": 12, "y": 13},
+      "id": 13,
+      "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "node_logged_users{job=\"integrations/unix\"} or vector(0)", "refId": "A"}],
+      "title": "Logged Users",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16},
+      "id": 14,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false},
+      "targets": [{"expr": "{job=~\".+\"} |~ \"(?i)(sshd|login|auth|session opened|session closed|accepted|failed|invalid user|authentication failure|pam_unix)\"", "refId": "A"}],
+      "title": "SSH & PAM Authentication Logs",
+      "type": "logs"
+    },
+
+    {"gridPos": {"h": 1, "w": 24, "x": 0, "y": 24}, "id": 202, "title": "🌐 Web Authentication (Grafana/ArgoCD)", "type": "row"},
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "short"}},
+      "gridPos": {"h": 3, "w": 6, "x": 0, "y": 25},
+      "id": 20,
+      "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "grafana_stat_total_users or vector(0)", "refId": "A"}],
+      "title": "Grafana Users",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "ops"}},
+      "gridPos": {"h": 3, "w": 6, "x": 6, "y": 25},
+      "id": 21,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "rate(grafana_http_request_duration_seconds_count{handler=\"/login\"}[5m])", "refId": "A"}],
+      "title": "Grafana Login Req/s",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 28},
+      "id": 22,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false},
+      "targets": [{"expr": "{namespace=\"vault-aio\", pod=~\"grafana.*|argocd.*\"} |~ \"(?i)(login|logout|auth|session|user|password|credential|access denied|forbidden|unauthorized)\"", "refId": "A"}],
+      "title": "Grafana & ArgoCD Auth Logs",
+      "type": "logs"
+    },
+
+    {"gridPos": {"h": 1, "w": 24, "x": 0, "y": 36}, "id": 203, "title": "🚨 Security Events & Failed Attempts", "type": "row"},
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 37},
+      "id": 30,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false},
+      "targets": [{"expr": "{job=~\".+\"} |~ \"(?i)(failed|denied|unauthorized|forbidden|invalid|rejected|blocked|attack|intrusion|suspicious|brute)\"", "refId": "A"}],
+      "title": "Security Events (Failed/Denied/Blocked)",
+      "type": "logs"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "tags": ["security", "logins", "authentication"],
+  "time": {"from": "now-6h", "to": "now"},
+  "title": "security-logins",
+  "uid": "security-logins",
+  "version": 1
+}
