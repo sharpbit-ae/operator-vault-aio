@@ -1,53 +1,96 @@
-# Operator Vault AIO (All-In-One)
+# Vault AIO (All-In-One)
 
-Standalone HashiCorp Vault deployment with integrated monitoring, logging, tracing, and time synchronization.
-
-## Components
-
-| Component | Purpose | Port |
-|-----------|---------|------|
-| **Vault** | Secrets management, PKI Root CA | 8200 |
-| **Prometheus** | Metrics collection | 9090 |
-| **Grafana** | Visualization & dashboards | 3000 |
-| **Alertmanager** | Alert routing & notifications | 9093 |
-| **Loki** | Log aggregation | 3100 |
-| **Alloy** | Log/metric collection agent | 4317 |
-| **Tempo** | Distributed tracing | 3200 |
-| **Chrony** | NTP time synchronization | 123/udp |
+Standalone HashiCorp Vault deployment with integrated observability stack, running on Kubernetes (k3d).
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     vault-aio namespace                          │
-│                                                                  │
-│  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐    │
-│  │    Vault     │────▶│  Prometheus  │────▶│   Grafana    │    │
-│  │   (8200)     │     │   (9090)     │     │   (3000)     │    │
-│  └──────────────┘     └──────────────┘     └──────────────┘    │
-│         │                    │                    │             │
-│         │                    ▼                    │             │
-│         │             ┌──────────────┐            │             │
-│         │             │ Alertmanager │            │             │
-│         │             │   (9093)     │            │             │
-│         │             └──────────────┘            │             │
-│         │                                         │             │
-│         ▼                                         ▼             │
-│  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐    │
-│  │    Alloy     │────▶│     Loki     │────▶│    Tempo     │    │
-│  │   (agent)    │     │   (3100)     │     │   (3200)     │    │
-│  └──────────────┘     └──────────────┘     └──────────────┘    │
-│         │                                                       │
-│         ▼                                                       │
-│  ┌──────────────┐                                              │
-│  │   Chrony     │  (NTP sync for all pods)                     │
-│  │  (123/udp)   │                                              │
-│  └──────────────┘                                              │
-│                                                                  │
-│  ════════════════════════════════════════════════════════════  │
-│                     NetworkPolicy: Deny All + Allow List        │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                         Vault AIO VM (10.0.0.20)                     │
+│  ┌─────────────────────────────────────────────────────────────────┐ │
+│  │                    k3d Kubernetes Cluster                        │ │
+│  │  ┌──────────────────────────────────────────────────────────┐   │ │
+│  │  │                    vault-aio namespace                    │   │ │
+│  │  │  ┌─────────┐  ┌──────────┐  ┌─────────┐  ┌───────────┐   │   │ │
+│  │  │  │  Vault  │  │ Grafana  │  │ Prom    │  │ Alert Mgr │   │   │ │
+│  │  │  │  :8200  │  │  :3000   │  │ :9090   │  │   :9093   │   │   │ │
+│  │  │  └─────────┘  └──────────┘  └─────────┘  └───────────┘   │   │ │
+│  │  │  ┌─────────┐  ┌──────────┐  ┌─────────┐  ┌───────────┐   │   │ │
+│  │  │  │  Loki   │  │  Tempo   │  │  Alloy  │  │  Chrony   │   │   │ │
+│  │  │  │  :3100  │  │  :3200   │  │ (DS)    │  │   (DS)    │   │   │ │
+│  │  │  └─────────┘  └──────────┘  └─────────┘  └───────────┘   │   │ │
+│  │  └──────────────────────────────────────────────────────────┘   │ │
+│  │  ┌──────────────────┐  ┌──────────────────────────────────────┐ │ │
+│  │  │ kube-system      │  │ argocd namespace                     │ │ │
+│  │  │ ┌──────────────┐ │  │ ┌──────────────────────────────────┐ │ │ │
+│  │  │ │   Traefik    │ │  │ │          ArgoCD                  │ │ │ │
+│  │  │ │  :80/:443    │ │  │ │    GitOps Continuous Delivery    │ │ │ │
+│  │  │ └──────────────┘ │  │ └──────────────────────────────────┘ │ │ │
+│  │  └──────────────────┘  └──────────────────────────────────────┘ │ │
+│  └─────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────┘
 ```
+
+## Components
+
+| Component | Version | Purpose | Port |
+|-----------|---------|---------|------|
+| **HashiCorp Vault** | 1.17 | Secrets management (dev mode) | 8200 |
+| **Grafana** | 11.0 | Visualization & dashboards | 3000 |
+| **Prometheus** | 2.52 | Metrics collection | 9090 |
+| **Alertmanager** | 0.27 | Alert routing & notifications | 9093 |
+| **Loki** | 3.0 | Log aggregation | 3100 |
+| **Tempo** | 2.4 | Distributed tracing | 3200 |
+| **Alloy** | 1.0 | Telemetry collector (DaemonSet) | 4317 |
+| **Chrony** | - | NTP time synchronization (DaemonSet) | 123/UDP |
+| **Traefik** | 2.11 | Ingress controller with TLS | 80/443 |
+| **cert-manager** | 1.14 | Certificate management | - |
+| **ArgoCD** | 3.2 | GitOps continuous delivery | 80 |
+
+## Quick Start
+
+### Prerequisites
+
+- KVM/QEMU/libvirt installed
+- SSH key at `~/.ssh/id_rsa`
+- Network bridge configured (10.0.0.0/24)
+
+### Deploy the VM
+
+```bash
+cd ansible
+ansible-playbook deploy.yml
+```
+
+### Access Services
+
+Add to `/etc/hosts`:
+```
+10.0.0.20 vault-aio.local vault.vault-aio.local grafana.vault-aio.local prometheus.vault-aio.local alertmanager.vault-aio.local loki.vault-aio.local tempo.vault-aio.local argocd.vault-aio.local
+```
+
+| Service | URL | Credentials |
+|---------|-----|-------------|
+| Homepage | https://vault-aio.local | - |
+| Vault | https://vault.vault-aio.local | Token: `root` |
+| Grafana | https://grafana.vault-aio.local | admin / vault-aio-admin |
+| Prometheus | https://prometheus.vault-aio.local | - |
+| Alertmanager | https://alertmanager.vault-aio.local | - |
+| ArgoCD | https://argocd.vault-aio.local | admin / (get password below) |
+
+Get ArgoCD password:
+```bash
+ssh aeonuser@10.0.0.20 "sudo kubectl get secret -n argocd argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d"
+```
+
+## Features
+
+- **TLS Everywhere**: Self-signed CA with automatic certificate rotation
+- **HTTP to HTTPS Redirect**: All HTTP traffic redirects to HTTPS (301)
+- **GitOps**: ArgoCD syncs with this repository automatically
+- **Network Policies**: Strict pod-to-pod communication rules
+- **CIS Hardening**: VM hardened according to CIS benchmarks
+- **Observability**: Full metrics, logs, and traces pipeline
 
 ## Network Policies
 
@@ -59,24 +102,31 @@ Standalone HashiCorp Vault deployment with integrated monitoring, logging, traci
   - Loki ← Grafana (log queries)
   - Tempo ← Grafana (trace queries)
   - Alloy → Loki/Tempo (log/trace shipping)
-  - Alloy → VM host (node logs via hostPath)
   - Chrony ↔ external NTP servers
   - Alertmanager → external (notifications)
+  - All pods → DNS (port 53)
 
-## Quick Start
+## Directory Structure
 
-```bash
-# Deploy all components
-kubectl apply -k manifests/
-
-# Check status
-kubectl get pods -n vault-aio
-
-# Access Grafana
-kubectl port-forward -n vault-aio svc/grafana 3000:3000
-
-# Access Vault
-kubectl port-forward -n vault-aio svc/vault 8200:8200
+```
+operator-vault-aio/
+├── ansible/                 # Ansible deployment automation
+│   ├── deploy.yml          # Main playbook
+│   └── inventory.yml       # Inventory configuration
+├── argocd/                  # ArgoCD application manifests
+│   └── application.yaml    # Vault AIO app definition
+└── manifests/              # Kubernetes manifests (kustomize)
+    ├── kustomization.yaml  # Kustomize configuration
+    ├── namespace.yaml      # Namespace definition
+    ├── vault/              # Vault configuration & deployment
+    ├── monitoring/         # Prometheus, Grafana, Alertmanager
+    ├── logging/            # Loki, Alloy
+    ├── tracing/            # Tempo
+    ├── ntp/                # Chrony
+    ├── ingress/            # Traefik, Homepage, Ingress rules
+    ├── cert-manager/       # ClusterIssuer configuration
+    ├── network-policies/   # Network security policies
+    └── dashboards/         # Grafana dashboard ConfigMaps
 ```
 
 ## Dashboards
@@ -88,35 +138,66 @@ Pre-configured Grafana dashboards:
 - **Container Logs** - All pod logs with filtering
 - **Trace Explorer** - Request tracing through Vault
 
-## Configuration
+## Customization
 
-### Vault
-- Auto-unseal: Configured via transit or cloud KMS
-- Audit logging: Enabled, sent to Loki via Alloy
-- Metrics: Prometheus endpoint enabled at /v1/sys/metrics
+### Change VM Resources
 
-### Alerting Rules
-- Vault sealed alert
-- High token creation rate
-- Authentication failures spike
-- Certificate expiry warnings
-- Disk space warnings
-
-## Directory Structure
-
+Edit `ansible/inventory.yml`:
+```yaml
+vault_aio:
+  vm_memory: 8192   # MB
+  vm_vcpus: 4
+  vm_disk_size: 100G
 ```
-operator-vault-aio/
-├── manifests/
-│   ├── vault/           # Vault deployment, config, policies
-│   ├── monitoring/      # Prometheus, Grafana, Alertmanager
-│   ├── logging/         # Loki, Alloy
-│   ├── tracing/         # Tempo
-│   ├── ntp/             # Chrony
-│   ├── network-policies/ # NetworkPolicy resources
-│   └── dashboards/      # Grafana dashboard ConfigMaps
-├── scripts/
-│   ├── init-vault.sh    # Initialize and unseal Vault
-│   └── backup.sh        # Backup Vault data
-└── docs/
-    └── RUNBOOK.md       # Operational procedures
+
+### Add Custom Dashboards
+
+Place dashboard JSON in `manifests/dashboards/` and update `manifests/dashboards/configmap.yaml`.
+
+### Modify Network Policies
+
+Edit files in `manifests/network-policies/` to adjust pod communication rules.
+
+## Troubleshooting
+
+### Check Pod Status
+```bash
+ssh aeonuser@10.0.0.20 "sudo kubectl get pods -n vault-aio"
 ```
+
+### View Logs
+```bash
+ssh aeonuser@10.0.0.20 "sudo kubectl logs -n vault-aio deployment/<name>"
+```
+
+### Restart a Service
+```bash
+ssh aeonuser@10.0.0.20 "sudo kubectl rollout restart -n vault-aio deployment/<name>"
+```
+
+### Force ArgoCD Sync
+```bash
+ssh aeonuser@10.0.0.20 "sudo kubectl patch application vault-aio -n argocd --type merge -p '{\"metadata\":{\"annotations\":{\"argocd.argoproj.io/refresh\":\"hard\"}}}'"
+```
+
+### Trust the CA Certificate
+```bash
+# Export CA certificate
+ssh aeonuser@10.0.0.20 "sudo kubectl get secret vault-aio-ca-secret -n cert-manager -o jsonpath='{.data.ca\\.crt}' | base64 -d" > vault-aio-ca.crt
+
+# Add to system trust (Linux)
+sudo cp vault-aio-ca.crt /usr/local/share/ca-certificates/
+sudo update-ca-certificates
+```
+
+## Security Notes
+
+- Vault is running in **dev mode** (not for production)
+- TLS certificates are self-signed (add CA to trust store for browsers)
+- Default credentials should be changed for production use
+- SSH password authentication is disabled (key-only)
+- nftables firewall configured on VM
+
+## License
+
+MIT
