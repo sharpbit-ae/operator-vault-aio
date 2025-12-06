@@ -1,16 +1,14 @@
 ---
-# Basic auth secret for Alertmanager (admin:alertmanager - will be replaced by vault-init)
-# Generated with: htpasswd -nb admin alertmanager | base64
-apiVersion: v1
-kind: Secret
+# Traefik BasicAuth Middlewares for protected services
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
 metadata:
-  name: alertmanager-basic-auth
+  name: prometheus-auth
   namespace: vault-aio
-type: Opaque
-stringData:
-  users: "admin:$apr1$AOcuN9TE$IzFFQZ6Y0s9rmLd6Wk9jQ/"
+spec:
+  basicAuth:
+    secret: prometheus-basic-auth
 ---
-# Traefik BasicAuth Middleware for Alertmanager
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
@@ -20,6 +18,25 @@ spec:
   basicAuth:
     secret: alertmanager-basic-auth
 ---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: loki-auth
+  namespace: vault-aio
+spec:
+  basicAuth:
+    secret: loki-basic-auth
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: tempo-auth
+  namespace: vault-aio
+spec:
+  basicAuth:
+    secret: tempo-basic-auth
+---
+# Main ingress for public services (Homepage, Vault, Grafana)
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -35,12 +52,9 @@ spec:
         - vault-aio.local
         - vault.vault-aio.local
         - grafana.vault-aio.local
-        - prometheus.vault-aio.local
-        - loki.vault-aio.local
-        - tempo.vault-aio.local
       secretName: vault-aio-tls
   rules:
-    # Homepage
+    # Homepage - no auth
     - host: vault-aio.local
       http:
         paths:
@@ -51,7 +65,7 @@ spec:
                 name: homepage
                 port:
                   number: 80
-    # Vault UI
+    # Vault UI - has its own auth
     - host: vault.vault-aio.local
       http:
         paths:
@@ -62,7 +76,7 @@ spec:
                 name: vault
                 port:
                   number: 8200
-    # Grafana
+    # Grafana - has its own auth
     - host: grafana.vault-aio.local
       http:
         paths:
@@ -73,7 +87,24 @@ spec:
                 name: grafana
                 port:
                   number: 3000
-    # Prometheus
+---
+# Prometheus ingress with basic auth
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: prometheus-ingress
+  namespace: vault-aio
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.middlewares: vault-aio-prometheus-auth@kubernetescrd
+    cert-manager.io/cluster-issuer: vault-pki-issuer
+spec:
+  tls:
+    - hosts:
+        - prometheus.vault-aio.local
+      secretName: prometheus-tls
+  rules:
     - host: prometheus.vault-aio.local
       http:
         paths:
@@ -84,30 +115,8 @@ spec:
                 name: prometheus
                 port:
                   number: 9090
-    # Loki (API only, no UI)
-    - host: loki.vault-aio.local
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: loki
-                port:
-                  number: 3100
-    # Tempo (API only, no UI)
-    - host: tempo.vault-aio.local
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: tempo
-                port:
-                  number: 3200
 ---
-# Separate Ingress for Alertmanager with Basic Auth
+# Alertmanager ingress with basic auth
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -134,3 +143,59 @@ spec:
                 name: alertmanager
                 port:
                   number: 9093
+---
+# Loki API ingress with basic auth
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: loki-ingress
+  namespace: vault-aio
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.middlewares: vault-aio-loki-auth@kubernetescrd
+    cert-manager.io/cluster-issuer: vault-pki-issuer
+spec:
+  tls:
+    - hosts:
+        - loki.vault-aio.local
+      secretName: loki-tls
+  rules:
+    - host: loki.vault-aio.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: loki
+                port:
+                  number: 3100
+---
+# Tempo API ingress with basic auth
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tempo-ingress
+  namespace: vault-aio
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.middlewares: vault-aio-tempo-auth@kubernetescrd
+    cert-manager.io/cluster-issuer: vault-pki-issuer
+spec:
+  tls:
+    - hosts:
+        - tempo.vault-aio.local
+      secretName: tempo-tls
+  rules:
+    - host: tempo.vault-aio.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: tempo
+                port:
+                  number: 3200
