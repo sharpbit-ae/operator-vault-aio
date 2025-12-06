@@ -28,7 +28,11 @@ resources:
   - network-policies/tracing-ntp-policy.yaml
   - network-policies/ingress-policy.yaml
   # Dashboards
-  - dashboards/configmap.yaml
+  - dashboards/configmap-overview.yaml
+  - dashboards/configmap-cluster.yaml
+  - dashboards/configmap-logs.yaml
+  - dashboards/configmap-metrics.yaml
+  - dashboards/configmap-security.yaml
   # Ingress & Homepage
   - ingress/homepage.yaml
   - ingress/ingress.yaml
