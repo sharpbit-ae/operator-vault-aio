@@ -1,0 +1,101 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "id": null,
+  "links": [],
+  "panels": [
+    {"gridPos": {"h": 2, "w": 24, "x": 0, "y": 0}, "id": 100, "options": {"content": "# Cluster Errors\nAll error-level logs across the vault-aio namespace", "mode": "markdown"}, "title": "", "transparent": true, "type": "text"},
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}, "unit": "short"}},
+      "gridPos": {"h": 3, "w": 6, "x": 0, "y": 2},
+      "id": 1,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "count(up == 0) or vector(0)", "refId": "A"}],
+      "title": "Services Down",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 1}, {"color": "red", "value": 5}]}, "unit": "short"}},
+      "gridPos": {"h": 3, "w": 6, "x": 6, "y": 2},
+      "id": 2,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "alertmanager_alerts{state=\"active\"} or vector(0)", "refId": "A"}],
+      "title": "Active Alerts",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 0.01}]}, "unit": "ops"}},
+      "gridPos": {"h": 3, "w": 6, "x": 12, "y": 2},
+      "id": 3,
+      "options": {"colorMode": "background", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "rate(vault_core_handle_request_count{error=\"true\"}[5m]) or vector(0)", "refId": "A"}],
+      "title": "Vault Errors/s",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 0.01}]}, "unit": "ops"}},
+      "gridPos": {"h": 3, "w": 6, "x": 18, "y": 2},
+      "id": 4,
+      "options": {"colorMode": "background", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "rate(prometheus_target_scrape_pools_failed_total[5m]) or vector(0)", "refId": "A"}],
+      "title": "Scrape Failures/s",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 5},
+      "id": 10,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false},
+      "targets": [{"expr": "{namespace=\"vault-aio\"} |~ \"(?i)(error|err|failed|failure|fatal|panic|crash|exception)\"", "refId": "A"}],
+      "title": "All Errors",
+      "type": "logs"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 7, "w": 12, "x": 0, "y": 13},
+      "id": 11,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false},
+      "targets": [{"expr": "{namespace=\"vault-aio\", pod=~\"vault.*\"} |~ \"(?i)(error|err|failed|failure|fatal|panic)\"", "refId": "A"}],
+      "title": "Vault Errors",
+      "type": "logs"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 7, "w": 12, "x": 12, "y": 13},
+      "id": 12,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false},
+      "targets": [{"expr": "{namespace=\"vault-aio\", pod=~\"prometheus.*\"} |~ \"(?i)(error|err|failed|failure|fatal|panic)\"", "refId": "A"}],
+      "title": "Prometheus Errors",
+      "type": "logs"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 7, "w": 12, "x": 0, "y": 20},
+      "id": 13,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false},
+      "targets": [{"expr": "{namespace=\"vault-aio\", pod=~\"loki.*\"} |~ \"(?i)(error|err|failed|failure|fatal|panic)\"", "refId": "A"}],
+      "title": "Loki Errors",
+      "type": "logs"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 7, "w": 12, "x": 12, "y": 20},
+      "id": 14,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false},
+      "targets": [{"expr": "{namespace=\"vault-aio\", pod=~\"(tempo|alertmanager|grafana|alloy).*\"} |~ \"(?i)(error|err|failed|failure|fatal|panic)\"", "refId": "A"}],
+      "title": "Other Services Errors",
+      "type": "logs"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "tags": ["logs", "errors", "troubleshooting"],
+  "time": {"from": "now-1h", "to": "now"},
+  "title": "logs-errors",
+  "uid": "logs-errors",
+  "version": 1
+}

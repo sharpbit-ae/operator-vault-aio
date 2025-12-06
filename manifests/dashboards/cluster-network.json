@@ -1,0 +1,120 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "id": null,
+  "links": [],
+  "panels": [
+    {"gridPos": {"h": 2, "w": 24, "x": 0, "y": 0}, "id": 100, "options": {"content": "# Cluster Network\nNetwork connectivity, throughput, and request latency", "mode": "markdown"}, "title": "", "transparent": true, "type": "text"},
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "Bps"}},
+      "gridPos": {"h": 3, "w": 6, "x": 0, "y": 2},
+      "id": 1,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "sum(rate(node_network_receive_bytes_total{job=\"integrations/unix\",device!~\"lo|veth.*|docker.*|br.*\"}[5m]))", "refId": "A"}],
+      "title": "Network RX",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "Bps"}},
+      "gridPos": {"h": 3, "w": 6, "x": 6, "y": 2},
+      "id": 2,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "sum(rate(node_network_transmit_bytes_total{job=\"integrations/unix\",device!~\"lo|veth.*|docker.*|br.*\"}[5m]))", "refId": "A"}],
+      "title": "Network TX",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 0.1}, {"color": "red", "value": 0.5}]}, "unit": "s"}},
+      "gridPos": {"h": 3, "w": 6, "x": 12, "y": 2},
+      "id": 3,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "histogram_quantile(0.99, rate(prometheus_http_request_duration_seconds_bucket[5m]))", "refId": "A"}],
+      "title": "Prometheus p99 Latency",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 0.1}, {"color": "red", "value": 0.5}]}, "unit": "s"}},
+      "gridPos": {"h": 3, "w": 6, "x": 18, "y": 2},
+      "id": 4,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "histogram_quantile(0.99, rate(loki_request_duration_seconds_bucket[5m]))", "refId": "A"}],
+      "title": "Loki p99 Latency",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "pointSize": 5, "showPoints": "never"}, "unit": "s"}},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 5},
+      "id": 5,
+      "targets": [
+        {"expr": "histogram_quantile(0.50, rate(prometheus_http_request_duration_seconds_bucket[5m]))", "legendFormat": "Prometheus p50", "refId": "A"},
+        {"expr": "histogram_quantile(0.95, rate(prometheus_http_request_duration_seconds_bucket[5m]))", "legendFormat": "Prometheus p95", "refId": "B"},
+        {"expr": "histogram_quantile(0.99, rate(prometheus_http_request_duration_seconds_bucket[5m]))", "legendFormat": "Prometheus p99", "refId": "C"}
+      ],
+      "title": "Prometheus HTTP Latency",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "pointSize": 5, "showPoints": "never"}, "unit": "s"}},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 5},
+      "id": 6,
+      "targets": [
+        {"expr": "histogram_quantile(0.50, rate(loki_request_duration_seconds_bucket[5m]))", "legendFormat": "Loki p50", "refId": "A"},
+        {"expr": "histogram_quantile(0.95, rate(loki_request_duration_seconds_bucket[5m]))", "legendFormat": "Loki p95", "refId": "B"},
+        {"expr": "histogram_quantile(0.99, rate(loki_request_duration_seconds_bucket[5m]))", "legendFormat": "Loki p99", "refId": "C"}
+      ],
+      "title": "Loki Request Latency",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "pointSize": 5, "showPoints": "never"}, "unit": "Bps"}},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 13},
+      "id": 7,
+      "targets": [
+        {"expr": "rate(node_network_receive_bytes_total{job=\"integrations/unix\",device!~\"lo|veth.*|docker.*|br.*\"}[5m])", "legendFormat": "{{device}} RX", "refId": "A"},
+        {"expr": "rate(node_network_transmit_bytes_total{job=\"integrations/unix\",device!~\"lo|veth.*|docker.*|br.*\"}[5m])", "legendFormat": "{{device}} TX", "refId": "B"}
+      ],
+      "title": "Network Throughput by Interface",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "pointSize": 5, "showPoints": "never"}, "unit": "pps"}},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 13},
+      "id": 8,
+      "targets": [
+        {"expr": "rate(node_network_receive_packets_total{job=\"integrations/unix\",device!~\"lo|veth.*|docker.*|br.*\"}[5m])", "legendFormat": "{{device}} RX pkts", "refId": "A"},
+        {"expr": "rate(node_network_transmit_packets_total{job=\"integrations/unix\",device!~\"lo|veth.*|docker.*|br.*\"}[5m])", "legendFormat": "{{device}} TX pkts", "refId": "B"}
+      ],
+      "title": "Network Packets",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "pointSize": 5, "showPoints": "never"}, "unit": "short"}},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 21},
+      "id": 9,
+      "targets": [
+        {"expr": "node_sockstat_TCP_alloc{job=\"integrations/unix\"}", "legendFormat": "TCP Allocated", "refId": "A"},
+        {"expr": "node_sockstat_TCP_inuse{job=\"integrations/unix\"}", "legendFormat": "TCP In Use", "refId": "B"},
+        {"expr": "node_sockstat_UDP_inuse{job=\"integrations/unix\"}", "legendFormat": "UDP In Use", "refId": "C"},
+        {"expr": "node_sockstat_sockets_used{job=\"integrations/unix\"}", "legendFormat": "Total Sockets", "refId": "D"}
+      ],
+      "title": "Socket Statistics",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "tags": ["cluster", "network", "monitoring"],
+  "time": {"from": "now-1h", "to": "now"},
+  "title": "cluster-network",
+  "uid": "cluster-network",
+  "version": 1
+}

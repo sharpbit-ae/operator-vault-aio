@@ -1,0 +1,85 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "id": null,
+  "links": [],
+  "panels": [
+    {"gridPos": {"h": 2, "w": 24, "x": 0, "y": 0}, "id": 100, "options": {"content": "# Vault Logs\nHashiCorp Vault audit events, authentication, and operations", "mode": "markdown"}, "title": "", "transparent": true, "type": "text"},
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "mappings": [{"options": {"0": {"text": "SEALED", "color": "red"}, "1": {"text": "UNSEALED", "color": "green"}}, "type": "value"}], "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}},
+      "gridPos": {"h": 3, "w": 4, "x": 0, "y": 2},
+      "id": 1,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "vault_core_unsealed{job=\"vault\"}", "refId": "A"}],
+      "title": "Seal Status",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "short"}},
+      "gridPos": {"h": 3, "w": 4, "x": 4, "y": 2},
+      "id": 2,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "vault_token_count{job=\"vault\"}", "refId": "A"}],
+      "title": "Active Tokens",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "ops"}},
+      "gridPos": {"h": 3, "w": 4, "x": 8, "y": 2},
+      "id": 3,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "rate(vault_core_handle_request_count{job=\"vault\"}[5m])", "refId": "A"}],
+      "title": "Requests/s",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 0.1}]}, "unit": "ops"}},
+      "gridPos": {"h": 3, "w": 4, "x": 12, "y": 2},
+      "id": 4,
+      "options": {"colorMode": "background", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "rate(vault_core_handle_request_count{job=\"vault\",error=\"true\"}[5m]) or vector(0)", "refId": "A"}],
+      "title": "Errors/s",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "s"}},
+      "gridPos": {"h": 3, "w": 4, "x": 16, "y": 2},
+      "id": 5,
+      "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "process_uptime_seconds{job=\"vault\"}", "refId": "A"}],
+      "title": "Uptime",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "bytes"}},
+      "gridPos": {"h": 3, "w": 4, "x": 20, "y": 2},
+      "id": 6,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "go_memstats_heap_inuse_bytes{job=\"vault\"}", "refId": "A"}],
+      "title": "Heap Memory",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 18, "w": 24, "x": 0, "y": 5},
+      "id": 10,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false},
+      "targets": [{"expr": "{namespace=\"vault-aio\", pod=~\"vault.*\"}", "refId": "A"}],
+      "title": "Vault Logs",
+      "type": "logs"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "tags": ["logs", "vault"],
+  "time": {"from": "now-1h", "to": "now"},
+  "title": "logs-vault",
+  "uid": "logs-vault",
+  "version": 1
+}

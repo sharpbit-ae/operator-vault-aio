@@ -1,0 +1,101 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "id": null,
+  "links": [],
+  "panels": [
+    {"gridPos": {"h": 2, "w": 24, "x": 0, "y": 0}, "id": 100, "options": {"content": "# Cluster Warnings\nAll warning-level logs across the vault-aio namespace", "mode": "markdown"}, "title": "", "transparent": true, "type": "text"},
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "short"}},
+      "gridPos": {"h": 3, "w": 6, "x": 0, "y": 2},
+      "id": 1,
+      "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "count(up)", "refId": "A"}],
+      "title": "Total Targets",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 1}]}, "unit": "short"}},
+      "gridPos": {"h": 3, "w": 6, "x": 6, "y": 2},
+      "id": 2,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "count(up == 0) or vector(0)", "refId": "A"}],
+      "title": "Unhealthy Targets",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 0.8}]}, "unit": "percentunit"}},
+      "gridPos": {"h": 3, "w": 6, "x": 12, "y": 2},
+      "id": 3,
+      "options": {"colorMode": "background", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "1 - (node_memory_MemAvailable_bytes{job=\"integrations/unix\"} / node_memory_MemTotal_bytes{job=\"integrations/unix\"})", "refId": "A"}],
+      "title": "Host Memory Used",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 0.8}]}, "unit": "percentunit"}},
+      "gridPos": {"h": 3, "w": 6, "x": 18, "y": 2},
+      "id": 4,
+      "options": {"colorMode": "background", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "1 - (node_filesystem_avail_bytes{job=\"integrations/unix\",mountpoint=\"/\"} / node_filesystem_size_bytes{job=\"integrations/unix\",mountpoint=\"/\"})", "refId": "A"}],
+      "title": "Host Disk Used",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 5},
+      "id": 10,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false},
+      "targets": [{"expr": "{namespace=\"vault-aio\"} |~ \"(?i)(warn|warning|deprecated|timeout|retry|slow)\" !~ \"(?i)(error|err|failed|failure|fatal|panic)\"", "refId": "A"}],
+      "title": "All Warnings",
+      "type": "logs"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 7, "w": 12, "x": 0, "y": 13},
+      "id": 11,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false},
+      "targets": [{"expr": "{namespace=\"vault-aio\", pod=~\"vault.*\"} |~ \"(?i)(warn|warning|deprecated|timeout|retry)\" !~ \"(?i)(error|failed|fatal)\"", "refId": "A"}],
+      "title": "Vault Warnings",
+      "type": "logs"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 7, "w": 12, "x": 12, "y": 13},
+      "id": 12,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false},
+      "targets": [{"expr": "{namespace=\"vault-aio\", pod=~\"prometheus.*\"} |~ \"(?i)(warn|warning|deprecated|timeout|retry)\" !~ \"(?i)(error|failed|fatal)\"", "refId": "A"}],
+      "title": "Prometheus Warnings",
+      "type": "logs"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 7, "w": 12, "x": 0, "y": 20},
+      "id": 13,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false},
+      "targets": [{"expr": "{namespace=\"vault-aio\", pod=~\"loki.*\"} |~ \"(?i)(warn|warning|deprecated|timeout|retry)\" !~ \"(?i)(error|failed|fatal)\"", "refId": "A"}],
+      "title": "Loki Warnings",
+      "type": "logs"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 7, "w": 12, "x": 12, "y": 20},
+      "id": 14,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false"},
+      "targets": [{"expr": "{namespace=\"vault-aio\", pod=~\"(tempo|alertmanager|grafana|alloy).*\"} |~ \"(?i)(warn|warning|deprecated|timeout|retry)\" !~ \"(?i)(error|failed|fatal)\"", "refId": "A"}],
+      "title": "Other Services Warnings",
+      "type": "logs"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "tags": ["logs", "warnings", "troubleshooting"],
+  "time": {"from": "now-1h", "to": "now"},
+  "title": "logs-warnings",
+  "uid": "logs-warnings",
+  "version": 1
+}

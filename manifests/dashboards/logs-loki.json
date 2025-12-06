@@ -1,0 +1,75 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "id": null,
+  "links": [],
+  "panels": [
+    {"gridPos": {"h": 2, "w": 24, "x": 0, "y": 0}, "id": 100, "options": {"content": "# Loki Logs\nLog aggregation system - ingestion, storage, and query logs", "mode": "markdown"}, "title": "", "transparent": true, "type": "text"},
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "mappings": [{"options": {"1": {"text": "UP", "color": "green"}, "0": {"text": "DOWN", "color": "red"}}, "type": "value"}], "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}},
+      "gridPos": {"h": 3, "w": 4, "x": 0, "y": 2},
+      "id": 1,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "up{job=\"loki\"}", "refId": "A"}],
+      "title": "Status",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "short"}},
+      "gridPos": {"h": 3, "w": 5, "x": 4, "y": 2},
+      "id": 2,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "loki_ingester_streams_created_total - loki_ingester_streams_removed_total", "refId": "A"}],
+      "title": "Active Streams",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "ops"}},
+      "gridPos": {"h": 3, "w": 5, "x": 9, "y": 2},
+      "id": 3,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "rate(loki_distributor_lines_received_total[5m])", "refId": "A"}],
+      "title": "Lines/s Ingested",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "Bps"}},
+      "gridPos": {"h": 3, "w": 5, "x": 14, "y": 2},
+      "id": 4,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "rate(loki_distributor_bytes_received_total[5m])", "refId": "A"}],
+      "title": "Bytes/s Ingested",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "bytes"}},
+      "gridPos": {"h": 3, "w": 5, "x": 19, "y": 2},
+      "id": 5,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+      "targets": [{"expr": "process_resident_memory_bytes{job=\"loki\"}", "refId": "A"}],
+      "title": "Memory",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 18, "w": 24, "x": 0, "y": 5},
+      "id": 10,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false},
+      "targets": [{"expr": "{namespace=\"vault-aio\", pod=~\"loki.*\"}", "refId": "A"}],
+      "title": "Loki Logs",
+      "type": "logs"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "tags": ["logs", "loki"],
+  "time": {"from": "now-1h", "to": "now"},
+  "title": "logs-loki",
+  "uid": "logs-loki",
+  "version": 1
+}
