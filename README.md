@@ -73,19 +73,24 @@ Add to `/etc/hosts`:
 |---------|-----|-------------|
 | Homepage | https://vault-aio.local | - |
 | Vault | https://vault.vault-aio.local | Token: `root` |
-| Grafana | https://grafana.vault-aio.local | admin / vault-aio-admin |
+| Grafana | https://grafana.vault-aio.local | admin / (see below) |
 | Prometheus | https://prometheus.vault-aio.local | - |
 | Alertmanager | https://alertmanager.vault-aio.local | - |
-| ArgoCD | https://argocd.vault-aio.local | admin / (get password below) |
+| ArgoCD | https://argocd.vault-aio.local | admin / (see below) |
 
-Get ArgoCD password:
+Get application passwords (stored in Vault):
 ```bash
-ssh aeonuser@10.0.0.20 "sudo kubectl get secret -n argocd argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d"
+# Grafana password
+ssh aeonuser@10.0.0.20 "sudo kubectl get secret vault-app-passwords -n vault-aio -o jsonpath='{.data.grafana-password}' | base64 -d"
+
+# ArgoCD password
+ssh aeonuser@10.0.0.20 "sudo kubectl get secret vault-app-passwords -n vault-aio -o jsonpath='{.data.argocd-password}' | base64 -d"
 ```
 
 ## Features
 
-- **TLS Everywhere**: Self-signed CA with automatic certificate rotation
+- **Vault PKI**: Root and Intermediate CA managed by Vault with ACME support
+- **TLS Everywhere**: Certificates issued by Vault PKI via cert-manager
 - **HTTP to HTTPS Redirect**: All HTTP traffic redirects to HTTPS (301)
 - **GitOps**: ArgoCD syncs with this repository automatically
 - **Network Policies**: Strict pod-to-pod communication rules
@@ -180,23 +185,58 @@ ssh aeonuser@10.0.0.20 "sudo kubectl rollout restart -n vault-aio deployment/<na
 ssh aeonuser@10.0.0.20 "sudo kubectl patch application vault-aio -n argocd --type merge -p '{\"metadata\":{\"annotations\":{\"argocd.argoproj.io/refresh\":\"hard\"}}}'"
 ```
 
-### Trust the CA Certificate
+### Trust the Vault CA Certificate
 ```bash
-# Export CA certificate
-ssh aeonuser@10.0.0.20 "sudo kubectl get secret vault-aio-ca-secret -n cert-manager -o jsonpath='{.data.ca\\.crt}' | base64 -d" > vault-aio-ca.crt
+# Export Root CA certificate from Vault
+ssh aeonuser@10.0.0.20 "sudo kubectl get secret vault-root-ca -n vault-aio -o jsonpath='{.data.ca\\.crt}' | base64 -d" > vault-aio-root-ca.crt
 
 # Add to system trust (Linux)
-sudo cp vault-aio-ca.crt /usr/local/share/ca-certificates/
+sudo cp vault-aio-root-ca.crt /usr/local/share/ca-certificates/
 sudo update-ca-certificates
 ```
 
 ## Security Notes
 
 - Vault is running in **dev mode** (not for production)
-- TLS certificates are self-signed (add CA to trust store for browsers)
-- Default credentials should be changed for production use
+- TLS certificates are signed by Vault's PKI (add Root CA to trust store for browsers)
+- Application passwords (Grafana, ArgoCD) are auto-generated and stored in Vault
+- Vault root token and keys are stored as Kubernetes secrets
 - SSH password authentication is disabled (key-only)
 - nftables firewall configured on VM
+
+## Vault PKI Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Vault PKI Secrets Engine                  │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │                    Root CA (pki/)                        │ │
+│  │         "Vault AIO Root CA" - 10 year TTL               │ │
+│  └───────────────────────┬─────────────────────────────────┘ │
+│                          │ signs                             │
+│  ┌───────────────────────▼─────────────────────────────────┐ │
+│  │              Intermediate CA (pki_int/)                  │ │
+│  │     "Vault AIO Intermediate CA" - 5 year TTL            │ │
+│  │                                                          │ │
+│  │  Roles:                                                  │ │
+│  │  - vault-aio-local: *.vault-aio.local certs             │ │
+│  │  - cert-manager: certs for cert-manager                  │ │
+│  │                                                          │ │
+│  │  ACME Endpoint: /v1/pki_int/acme/directory              │ │
+│  └──────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+           │
+           │ issues certificates via
+           ▼
+┌─────────────────────────────────────────────────────────────┐
+│              cert-manager (ClusterIssuer)                    │
+│                   vault-pki-issuer                           │
+│                          │                                   │
+│      ┌───────────────────┼───────────────────┐              │
+│      ▼                   ▼                   ▼              │
+│  vault-aio-tls      argocd-tls         (other certs)       │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ## License
 

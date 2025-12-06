@@ -10,7 +10,7 @@ data:
 
     [security]
     admin_user = admin
-    admin_password = admin
+    # Password loaded from GF_SECURITY_ADMIN_PASSWORD environment variable
 
     [auth.anonymous]
     enabled = false
@@ -192,6 +192,8 @@ kind: Secret
 metadata:
   name: grafana-admin
   namespace: vault-aio
+  annotations:
+    description: "Placeholder - replaced by vault-init job with random password"
 type: Opaque
 stringData:
-  password: "vault-aio-admin"  # Change in production
+  password: "initial-placeholder"  # Will be replaced by vault-init job

@@ -1,5 +1,38 @@
-# Self-signed CA ClusterIssuer for vault-aio
+# Vault PKI ClusterIssuer for vault-aio
+# Uses Vault's PKI secrets engine as the CA
 ---
+# Service Account for cert-manager to authenticate with Vault
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cert-manager
+  namespace: cert-manager
+---
+# Secret for Vault token (created by vault-init job, placeholder here)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vault-token
+  namespace: cert-manager
+type: Opaque
+stringData:
+  token: "root"
+---
+# Vault PKI Issuer - uses Vault's intermediate CA
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: vault-pki-issuer
+spec:
+  vault:
+    path: pki_int/sign/cert-manager
+    server: http://vault.vault-aio.svc.cluster.local:8200
+    auth:
+      tokenSecretRef:
+        name: vault-token
+        key: token
+---
+# Keep the self-signed issuer as fallback during initialization
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
@@ -7,7 +40,7 @@ metadata:
 spec:
   selfSigned: {}
 ---
-# CA Certificate - used to sign all other certs
+# Fallback CA Certificate - used until Vault PKI is ready
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -27,7 +60,7 @@ spec:
     kind: ClusterIssuer
     group: cert-manager.io
 ---
-# CA Issuer - signs certificates using the CA
+# Fallback CA Issuer
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:

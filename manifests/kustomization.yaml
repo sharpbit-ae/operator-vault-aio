@@ -8,6 +8,7 @@ resources:
   # Vault
   - vault/vault-config.yaml
   - vault/vault-deployment.yaml
+  - vault/vault-init-job.yaml
   # Monitoring
   - monitoring/prometheus.yaml
   - monitoring/grafana.yaml

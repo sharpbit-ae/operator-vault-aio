@@ -1,0 +1,449 @@
+# Vault PKI Initialization Job
+# Configures Root CA, Intermediate CA, and ACME endpoint
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vault-init
+  namespace: vault-aio
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vault-init
+  namespace: vault-aio
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create", "update", "patch", "get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vault-init
+  namespace: vault-aio
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: vault-init
+subjects:
+  - kind: ServiceAccount
+    name: vault-init
+    namespace: vault-aio
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vault-init-certmanager
+  namespace: cert-manager
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create", "update", "patch", "get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vault-init-certmanager
+  namespace: cert-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: vault-init-certmanager
+subjects:
+  - kind: ServiceAccount
+    name: vault-init
+    namespace: vault-aio
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vault-init-argocd
+  namespace: argocd
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create", "update", "patch", "get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vault-init-argocd
+  namespace: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: vault-init-argocd
+subjects:
+  - kind: ServiceAccount
+    name: vault-init
+    namespace: vault-aio
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vault-init-scripts
+  namespace: vault-aio
+data:
+  init-vault.sh: |
+    #!/bin/sh
+    set -e
+
+    VAULT_ADDR="${VAULT_ADDR:-http://vault:8200}"
+    VAULT_TOKEN="${VAULT_TOKEN:-root}"
+
+    export VAULT_ADDR VAULT_TOKEN
+
+    echo "=== Vault PKI Initialization Script ==="
+    echo "Vault Address: $VAULT_ADDR"
+
+    # Wait for Vault to be ready
+    echo "Waiting for Vault to be ready..."
+    until vault status 2>/dev/null | grep -q "Sealed.*false"; do
+      echo "Vault not ready, waiting..."
+      sleep 2
+    done
+    echo "Vault is ready!"
+
+    # Check if Root CA exists
+    ROOT_CA_EXISTS=false
+    INT_CA_EXISTS=false
+
+    if vault secrets list 2>/dev/null | grep -q "pki/"; then
+      echo "PKI secrets engine already exists, checking configuration..."
+      if vault read pki/cert/ca >/dev/null 2>&1; then
+        echo "Root CA exists"
+        ROOT_CA_EXISTS=true
+      fi
+    fi
+
+    if vault secrets list 2>/dev/null | grep -q "pki_int/"; then
+      if vault read pki_int/cert/ca >/dev/null 2>&1; then
+        echo "Intermediate CA exists"
+        INT_CA_EXISTS=true
+      fi
+    fi
+
+    # Configure Root CA if needed
+    if [ "$ROOT_CA_EXISTS" != "true" ]; then
+      echo ""
+      echo "=== Configuring Root CA ==="
+
+      # Enable PKI secrets engine for Root CA
+      vault secrets enable -path=pki pki 2>/dev/null || echo "PKI already enabled"
+
+      # Set max TTL to 10 years
+      vault secrets tune -max-lease-ttl=87600h pki
+
+      # Generate Root CA
+      echo "Generating Root CA certificate..."
+      vault write pki/root/generate/internal \
+        common_name="Vault AIO Root CA" \
+        issuer_name="root-2024" \
+        ttl=87600h \
+        key_bits=4096
+
+      # Configure CA and CRL URLs
+      vault write pki/config/urls \
+        issuing_certificates="${VAULT_ADDR}/v1/pki/ca" \
+        crl_distribution_points="${VAULT_ADDR}/v1/pki/crl"
+    fi
+
+    # Configure Intermediate CA if needed
+    if [ "$INT_CA_EXISTS" != "true" ]; then
+      echo ""
+      echo "=== Configuring Intermediate CA ==="
+
+      # Enable PKI secrets engine for Intermediate CA
+      vault secrets enable -path=pki_int pki 2>/dev/null || echo "PKI Int already enabled"
+
+      # Set max TTL to 5 years
+      vault secrets tune -max-lease-ttl=43800h pki_int
+
+      # Generate Intermediate CSR
+      echo "Generating Intermediate CA CSR..."
+      vault write -field=csr pki_int/intermediate/generate/internal \
+        common_name="Vault AIO Intermediate CA" \
+        issuer_name="intermediate-2024" \
+        key_bits=4096 > /tmp/intermediate.csr
+
+      # Sign Intermediate with Root CA
+      echo "Signing Intermediate CA with Root CA..."
+      vault write -field=certificate pki/root/sign-intermediate \
+        csr=@/tmp/intermediate.csr \
+        format=pem_bundle \
+        ttl=43800h > /tmp/intermediate-signed.crt
+
+      # Set the signed certificate
+      echo "Setting signed intermediate certificate..."
+      vault write pki_int/intermediate/set-signed certificate=@/tmp/intermediate-signed.crt
+
+      # Configure Intermediate CA URLs
+      vault write pki_int/config/urls \
+        issuing_certificates="${VAULT_ADDR}/v1/pki_int/ca" \
+        crl_distribution_points="${VAULT_ADDR}/v1/pki_int/crl"
+
+      echo ""
+      echo "=== Creating PKI Roles ==="
+
+      # Create role for vault-aio.local domain certificates
+      vault write pki_int/roles/vault-aio-local \
+        allowed_domains="vault-aio.local" \
+        allow_subdomains=true \
+        allow_bare_domains=true \
+        max_ttl=720h \
+        key_bits=2048 \
+        require_cn=false \
+        allow_any_name=false
+
+      # Create role for cert-manager
+      vault write pki_int/roles/cert-manager \
+        allowed_domains="vault-aio.local,svc.cluster.local" \
+        allow_subdomains=true \
+        allow_bare_domains=true \
+        max_ttl=720h \
+        key_bits=2048 \
+        require_cn=false \
+        allow_any_name=false
+
+      echo ""
+      echo "=== Enabling ACME ==="
+
+      # Enable ACME on intermediate CA
+      vault write pki_int/config/acme enabled=true
+
+      # Configure cluster-local ACME
+      vault write pki_int/config/cluster \
+        path="${VAULT_ADDR}/v1/pki_int" \
+        aia_path="${VAULT_ADDR}/v1/pki_int"
+    fi
+
+    echo ""
+    echo "=== Creating Kubernetes Authentication ==="
+
+    # Enable Kubernetes auth
+    vault auth enable kubernetes 2>/dev/null || echo "Kubernetes auth already enabled"
+
+    # Configure Kubernetes auth
+    vault write auth/kubernetes/config \
+      kubernetes_host="https://kubernetes.default.svc:443"
+
+    echo ""
+    echo "=== Creating Policies ==="
+
+    # Policy for cert-manager to issue certificates
+    vault policy write cert-manager - <<EOF
+    path "pki_int/sign/cert-manager" {
+      capabilities = ["create", "update"]
+    }
+    path "pki_int/issue/cert-manager" {
+      capabilities = ["create"]
+    }
+    path "pki/cert/ca" {
+      capabilities = ["read"]
+    }
+    path "pki_int/cert/ca" {
+      capabilities = ["read"]
+    }
+    EOF
+
+    # Policy for reading secrets
+    vault policy write secrets-reader - <<EOF
+    path "secret/data/*" {
+      capabilities = ["read"]
+    }
+    EOF
+
+    # Create Kubernetes role for cert-manager
+    vault write auth/kubernetes/role/cert-manager \
+      bound_service_account_names=cert-manager \
+      bound_service_account_namespaces=cert-manager \
+      policies=cert-manager \
+      ttl=1h
+
+    echo ""
+    echo "=== Storing Application Secrets ==="
+
+    # Enable KV secrets engine
+    vault secrets enable -path=secret -version=2 kv 2>/dev/null || echo "KV secrets engine already enabled"
+
+    # Generate random passwords using /dev/urandom
+    GRAFANA_PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 24)
+    ARGOCD_PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 24)
+
+    # Store passwords in Vault
+    vault kv put secret/grafana \
+      admin_user=admin \
+      admin_password="$GRAFANA_PASSWORD"
+
+    vault kv put secret/argocd \
+      admin_user=admin \
+      admin_password="$ARGOCD_PASSWORD"
+
+    echo ""
+    echo "=== Exporting Secrets to Kubernetes ==="
+
+    # Get Root CA certificate
+    ROOT_CA=$(vault read -field=certificate pki/cert/ca)
+
+    # Get Intermediate CA certificate
+    INT_CA=$(vault read -field=certificate pki_int/cert/ca)
+
+    # Create CA chain
+    CA_CHAIN="${INT_CA}
+    ${ROOT_CA}"
+
+    # Store Vault credentials as Kubernetes secret
+    cat <<EOSECRET | kubectl apply -f -
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: vault-root-token
+      namespace: vault-aio
+    type: Opaque
+    stringData:
+      token: "${VAULT_TOKEN}"
+    EOSECRET
+
+    # Store CA certificates for cert-manager
+    cat <<EOSECRET | kubectl apply -f -
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: vault-pki-ca
+      namespace: cert-manager
+    type: Opaque
+    stringData:
+      ca.crt: |
+    $(echo "$CA_CHAIN" | sed 's/^/    /')
+    EOSECRET
+
+    # Store Root CA separately
+    cat <<EOSECRET | kubectl apply -f -
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: vault-root-ca
+      namespace: vault-aio
+    type: Opaque
+    stringData:
+      ca.crt: |
+    $(echo "$ROOT_CA" | sed 's/^/    /')
+    EOSECRET
+
+    # Update Grafana secret with Vault-generated password
+    cat <<EOSECRET | kubectl apply -f -
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: grafana-admin
+      namespace: vault-aio
+    type: Opaque
+    stringData:
+      password: "${GRAFANA_PASSWORD}"
+    EOSECRET
+
+    # Create ArgoCD admin password secret
+    cat <<EOSECRET | kubectl apply -f -
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: argocd-vault-password
+      namespace: argocd
+    type: Opaque
+    stringData:
+      password: "${ARGOCD_PASSWORD}"
+    EOSECRET
+
+    # Store passwords for reference
+    cat <<EOSECRET | kubectl apply -f -
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: vault-app-passwords
+      namespace: vault-aio
+      annotations:
+        description: "Application passwords generated by Vault"
+    type: Opaque
+    stringData:
+      grafana-password: "${GRAFANA_PASSWORD}"
+      argocd-password: "${ARGOCD_PASSWORD}"
+    EOSECRET
+
+    echo ""
+    echo "=== PKI Initialization Complete ==="
+    echo ""
+    echo "Root CA: pki/"
+    echo "Intermediate CA: pki_int/"
+    echo "ACME Endpoint: ${VAULT_ADDR}/v1/pki_int/acme/directory"
+    echo ""
+    echo "Secrets created:"
+    echo "  - vault-aio/vault-root-token"
+    echo "  - vault-aio/vault-root-ca"
+    echo "  - vault-aio/vault-app-passwords"
+    echo "  - cert-manager/vault-pki-ca"
+    echo "  - argocd/argocd-vault-password"
+    echo ""
+    echo "Passwords stored in Vault at:"
+    echo "  - secret/grafana"
+    echo "  - secret/argocd"
+    echo ""
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vault-init
+  namespace: vault-aio
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 3
+  template:
+    spec:
+      serviceAccountName: vault-init
+      restartPolicy: OnFailure
+      initContainers:
+        # Download kubectl
+        - name: download-kubectl
+          image: alpine:3.19
+          command:
+            - /bin/sh
+            - -c
+            - |
+              wget -O /shared/kubectl "https://dl.k8s.io/release/v1.29.0/bin/linux/amd64/kubectl"
+              chmod +x /shared/kubectl
+          volumeMounts:
+            - name: shared
+              mountPath: /shared
+      containers:
+        - name: vault-init
+          image: hashicorp/vault:1.15
+          command: ["/bin/sh", "/scripts/init-vault.sh"]
+          env:
+            - name: VAULT_ADDR
+              value: "http://vault:8200"
+            - name: VAULT_TOKEN
+              value: "root"
+            - name: PATH
+              value: "/shared:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+            - name: shared
+              mountPath: /shared
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
+      volumes:
+        - name: scripts
+          configMap:
+            name: vault-init-scripts
+            defaultMode: 0755
+        - name: shared
+          emptyDir: {}
