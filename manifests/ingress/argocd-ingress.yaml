@@ -1,5 +1,15 @@
 # ArgoCD Ingress - Applied separately to argocd namespace
 # This file is NOT managed by kustomization.yaml because it needs to be in the argocd namespace
+---
+# ConfigMap patch to disable TLS on ArgoCD server (TLS terminated at ingress)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cmd-params-cm
+  namespace: argocd
+data:
+  server.insecure: "true"
+---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

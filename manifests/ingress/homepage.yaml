@@ -233,17 +233,17 @@ data:
         <div class="quick-links">
           <h2>Quick Access</h2>
           <div class="links-row">
-            <a href="https://vault.vault-aio.local" class="quick-link">Vault</a>
-            <a href="https://grafana.vault-aio.local" class="quick-link">Grafana</a>
-            <a href="https://prometheus.vault-aio.local" class="quick-link">Prometheus</a>
-            <a href="https://alertmanager.vault-aio.local" class="quick-link">Alertmanager</a>
-            <a href="https://argocd.vault-aio.local" class="quick-link">ArgoCD</a>
+            <a href="https://vault.vault-aio.local" class="quick-link" target="_blank" rel="noopener">Vault</a>
+            <a href="https://grafana.vault-aio.local" class="quick-link" target="_blank" rel="noopener">Grafana</a>
+            <a href="https://prometheus.vault-aio.local" class="quick-link" target="_blank" rel="noopener">Prometheus</a>
+            <a href="https://alertmanager.vault-aio.local" class="quick-link" target="_blank" rel="noopener">Alertmanager</a>
+            <a href="https://argocd.vault-aio.local" class="quick-link" target="_blank" rel="noopener">ArgoCD</a>
           </div>
         </div>
 
         <h2 class="section-title">Core Services</h2>
         <div class="services-grid">
-          <a href="https://vault.vault-aio.local" class="service-card vault">
+          <a href="https://vault.vault-aio.local" class="service-card vault" target="_blank" rel="noopener">
             <div class="service-header">
               <div class="service-icon">V</div>
               <div class="service-title">
@@ -258,7 +258,7 @@ data:
             <div class="service-url">https://vault.vault-aio.local</div>
           </a>
 
-          <a href="https://argocd.vault-aio.local" class="service-card argocd">
+          <a href="https://argocd.vault-aio.local" class="service-card argocd" target="_blank" rel="noopener">
             <div class="service-header">
               <div class="service-icon">A</div>
               <div class="service-title">
@@ -276,7 +276,7 @@ data:
 
         <h2 class="section-title">Monitoring & Visualization</h2>
         <div class="services-grid">
-          <a href="https://grafana.vault-aio.local" class="service-card grafana">
+          <a href="https://grafana.vault-aio.local" class="service-card grafana" target="_blank" rel="noopener">
             <div class="service-header">
               <div class="service-icon">G</div>
               <div class="service-title">
@@ -287,12 +287,12 @@ data:
             </div>
             <p class="service-description">
               Query, visualize, and alert on metrics from Prometheus, Loki, and Tempo.
-              <br><strong>Login:</strong> admin / vault-aio-admin
+              <br><strong>Login:</strong> admin / (see vault-app-passwords secret)
             </p>
             <div class="service-url">https://grafana.vault-aio.local</div>
           </a>
 
-          <a href="https://prometheus.vault-aio.local" class="service-card prometheus">
+          <a href="https://prometheus.vault-aio.local" class="service-card prometheus" target="_blank" rel="noopener">
             <div class="service-header">
               <div class="service-icon">P</div>
               <div class="service-title">
@@ -307,7 +307,7 @@ data:
             <div class="service-url">https://prometheus.vault-aio.local</div>
           </a>
 
-          <a href="https://alertmanager.vault-aio.local" class="service-card alertmanager">
+          <a href="https://alertmanager.vault-aio.local" class="service-card alertmanager" target="_blank" rel="noopener">
             <div class="service-header">
               <div class="service-icon">!</div>
               <div class="service-title">
@@ -325,7 +325,7 @@ data:
 
         <h2 class="section-title">Logging & Tracing</h2>
         <div class="services-grid">
-          <a href="https://loki.vault-aio.local/ready" class="service-card loki">
+          <a href="https://loki.vault-aio.local/ready" class="service-card loki" target="_blank" rel="noopener">
             <div class="service-header">
               <div class="service-icon">L</div>
               <div class="service-title">
@@ -340,7 +340,7 @@ data:
             <div class="service-url">https://loki.vault-aio.local (API)</div>
           </a>
 
-          <a href="https://tempo.vault-aio.local/ready" class="service-card tempo">
+          <a href="https://tempo.vault-aio.local/ready" class="service-card tempo" target="_blank" rel="noopener">
             <div class="service-header">
               <div class="service-icon">T</div>
               <div class="service-title">
