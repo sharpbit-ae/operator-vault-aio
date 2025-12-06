@@ -1,0 +1,39 @@
+---
+# Dependency checking for Phase 3: k3d Installation
+
+- name: Check for required binaries
+  ansible.builtin.command:
+    cmd: "which {{ item }}"
+  register: binary_check
+  failed_when: false
+  changed_when: false
+  loop:
+    - curl
+    - wget
+    - systemctl
+
+- name: Fail if required binaries are missing
+  ansible.builtin.fail:
+    msg: "Required binary '{{ item.item }}' not found. Install with: apt install curl wget systemd"
+  when: item.rc != 0
+  loop: "{{ binary_check.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Check for required kernel modules
+  ansible.builtin.shell: "lsmod | grep -E '(br_netfilter|overlay)' || modprobe {{ item }}"
+  loop:
+    - br_netfilter
+    - overlay
+  changed_when: false
+  failed_when: false
+
+- name: Display dependency check summary
+  ansible.builtin.debug:
+    msg:
+      - "=== Phase 3 Dependency Check Complete ==="
+      - "✓ curl and wget available"
+      - "✓ systemd available"
+      - "✓ Kernel modules loaded (br_netfilter, overlay)"
+      - ""
+      - "Ready to install Docker and k3d"

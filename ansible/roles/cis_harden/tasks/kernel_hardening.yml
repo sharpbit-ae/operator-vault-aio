@@ -1,0 +1,24 @@
+---
+# Kernel hardening tasks
+
+- name: Apply kernel hardening parameters
+  ansible.posix.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+    sysctl_set: yes
+    reload: yes
+  loop: "{{ sysctl_hardening | dict2items }}"
+  failed_when: false
+
+- name: Make kernel parameters persistent
+  ansible.builtin.copy:
+    content: |
+      # CIS Hardening - Kernel Parameters
+      {% for key, value in sysctl_hardening.items() %}
+      {{ key }} = {{ value }}
+      {% endfor %}
+    dest: /etc/sysctl.d/99-cis-hardening.conf
+    mode: '0644'
+    owner: root
+    group: root

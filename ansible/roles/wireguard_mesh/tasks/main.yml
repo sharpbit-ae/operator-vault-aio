@@ -1,0 +1,155 @@
+---
+# Phase 2.5 - WireGuard Mesh VPN Tasks
+# This role installs and configures WireGuard VPN for inter-VM mesh networking
+
+- name: Install WireGuard packages
+  apt:
+    name:
+      - wireguard
+      - wireguard-tools
+    state: present
+    update_cache: yes
+  tags:
+    - wireguard
+    - install
+
+- name: Create WireGuard configuration directory
+  file:
+    path: /etc/wireguard
+    state: directory
+    mode: '0700'
+    owner: root
+    group: root
+  tags:
+    - wireguard
+    - config
+
+- name: Check if private key exists
+  stat:
+    path: /etc/wireguard/privatekey
+  register: wg_privatekey_file
+  tags:
+    - wireguard
+    - config
+
+- name: Generate WireGuard private key
+  shell: wg genkey | tee /etc/wireguard/privatekey | wg pubkey > /etc/wireguard/publickey
+  args:
+    creates: /etc/wireguard/privatekey
+  when: not wg_privatekey_file.stat.exists and (wireguard_private_key is not defined or wireguard_private_key == "")
+  tags:
+    - wireguard
+    - config
+
+- name: Set permissions on private key
+  file:
+    path: /etc/wireguard/privatekey
+    mode: '0600'
+    owner: root
+    group: root
+  when: not (wireguard_private_key is defined and wireguard_private_key != "")
+  tags:
+    - wireguard
+    - config
+
+- name: Read generated private key
+  slurp:
+    src: /etc/wireguard/privatekey
+  register: wg_generated_privatekey
+  when: not (wireguard_private_key is defined and wireguard_private_key != "")
+  tags:
+    - wireguard
+    - config
+
+- name: Set private key variable from file
+  set_fact:
+    wireguard_private_key: "{{ wg_generated_privatekey.content | b64decode | trim }}"
+  when: wg_generated_privatekey is defined and wg_generated_privatekey.content is defined
+  tags:
+    - wireguard
+    - config
+
+- name: Create systemd override directory
+  file:
+    path: "/etc/systemd/system/wg-quick@{{ wireguard_interface }}.service.d"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  tags:
+    - wireguard
+    - systemd
+
+- name: Deploy systemd service override configuration
+  template:
+    src: wg-quick-override.conf.j2
+    dest: "/etc/systemd/system/wg-quick@{{ wireguard_interface }}.service.d/override.conf"
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - reload systemd daemon
+    - restart wireguard
+  tags:
+    - wireguard
+    - systemd
+
+- name: Deploy WireGuard interface configuration
+  template:
+    src: wg0.conf.j2
+    dest: "/etc/wireguard/{{ wireguard_interface }}.conf"
+    owner: root
+    group: root
+    mode: '0600'
+  notify:
+    - restart wireguard
+  tags:
+    - wireguard
+    - config
+
+- name: Enable WireGuard service at boot
+  systemd:
+    name: "wg-quick@{{ wireguard_interface }}"
+    enabled: yes
+    daemon_reload: yes
+  tags:
+    - wireguard
+    - systemd
+
+- name: Ensure WireGuard service is started
+  systemd:
+    name: "wg-quick@{{ wireguard_interface }}"
+    state: started
+    daemon_reload: yes
+  tags:
+    - wireguard
+    - systemd
+
+- name: Verify WireGuard interface is up
+  command: "wg show {{ wireguard_interface }}"
+  register: wg_status
+  changed_when: false
+  failed_when: false
+  tags:
+    - wireguard
+    - verify
+
+- name: Read public key for display
+  slurp:
+    src: /etc/wireguard/publickey
+  register: wg_publickey
+  failed_when: false
+  tags:
+    - wireguard
+    - verify
+
+- name: Display WireGuard status
+  debug:
+    msg:
+      - "WireGuard Status: {{ 'Active' if wg_status.rc == 0 else 'Not Running' }}"
+      - "Interface: {{ wireguard_interface }}"
+      - "Tunnel IP: {{ wireguard_tunnel_ip }}"
+      - "Public Key: {{ wg_publickey.content | b64decode | trim if wg_publickey.content is defined else 'Not generated' }}"
+  tags:
+    - wireguard
+    - verify

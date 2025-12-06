@@ -1,0 +1,23 @@
+---
+# WireGuard Service Handlers
+
+- name: reload systemd daemon
+  systemd:
+    daemon_reload: yes
+  listen: reload systemd daemon
+
+- name: restart wireguard
+  systemd:
+    name: "wg-quick@{{ wireguard_interface }}"
+    state: restarted
+    enabled: yes
+    daemon_reload: yes
+  listen: restart wireguard
+
+- name: reload wireguard config
+  command: "wg-quick down {{ wireguard_interface }}; wg-quick up {{ wireguard_interface }}"
+  notify: wireguard reloaded
+
+- name: wireguard reloaded
+  debug:
+    msg: "WireGuard configuration reloaded"

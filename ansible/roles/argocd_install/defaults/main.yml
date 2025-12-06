@@ -1,0 +1,10 @@
+---
+# Default variables for ArgoCD installation
+
+# ArgoCD version (uses stable by default)
+argocd_manifest_url: "https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml"
+
+# Ingress configuration (optional - only if you want ingress)
+create_ingress: false
+k8s_domain: "local.example.com"
+ingress_class: "nginx"

@@ -1,0 +1,28 @@
+---
+# File permissions tasks
+
+- name: Set permissions on critical system files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    mode: "{{ item.mode }}"
+    owner: root
+    group: root
+  loop:
+    - { path: "/etc/passwd", mode: "0644" }
+    - { path: "/etc/shadow", mode: "0640" }
+    - { path: "/etc/group", mode: "0644" }
+    - { path: "/etc/gshadow", mode: "0640" }
+    - { path: "/etc/passwd-", mode: "0600" }
+    - { path: "/etc/shadow-", mode: "0600" }
+    - { path: "/etc/group-", mode: "0600" }
+    - { path: "/etc/gshadow-", mode: "0600" }
+  failed_when: false
+
+- name: Ensure /tmp is properly secured
+  ansible.builtin.mount:
+    path: /tmp
+    src: tmpfs
+    fstype: tmpfs
+    opts: defaults,noexec,nosuid,nodev
+    state: mounted
+  failed_when: false

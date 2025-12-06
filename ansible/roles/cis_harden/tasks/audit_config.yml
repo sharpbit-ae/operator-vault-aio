@@ -1,0 +1,63 @@
+---
+# Audit configuration tasks
+
+- name: Install auditd for system auditing
+  ansible.builtin.apt:
+    name: auditd
+    state: present
+
+- name: Enable and start auditd
+  ansible.builtin.systemd:
+    name: auditd
+    enabled: yes
+    state: started
+
+- name: Configure audit rules for CIS compliance
+  ansible.builtin.copy:
+    content: |
+      # CIS Hardening - Audit Rules
+
+      # Delete all existing rules
+      -D
+
+      # Buffer Size
+      -b 8192
+
+      # Failure Mode (0=silent 1=printk 2=panic)
+      -f 1
+
+      # Audit time changes
+      -a always,exit -F arch=b64 -S adjtimex -S settimeofday -k time-change
+      -a always,exit -F arch=b32 -S adjtimex -S settimeofday -S stime -k time-change
+      -a always,exit -F arch=b64 -S clock_settime -k time-change
+      -w /etc/localtime -p wa -k time-change
+
+      # User and group changes
+      -w /etc/group -p wa -k identity
+      -w /etc/passwd -p wa -k identity
+      -w /etc/gshadow -p wa -k identity
+      -w /etc/shadow -p wa -k identity
+
+      # Network changes
+      -w /etc/issue -p wa -k network-changes
+      -w /etc/issue.net -p wa -k network-changes
+      -w /etc/hosts -p wa -k network-changes
+
+      # Login/logout events
+      -w /var/log/lastlog -p wa -k logins
+      -w /var/run/faillock/ -p wa -k logins
+      -w /var/run/utmp -p wa -k session
+      -w /var/log/wtmp -p wa -k logins
+      -w /var/log/btmp -p wa -k logins
+
+      # Sudoers file changes
+      -w /etc/sudoers -p wa -k sudoers
+      -w /etc/sudoers.d/ -p wa -k sudoers
+
+      # Make configuration immutable
+      -e 2
+    dest: /etc/audit/rules.d/cis-hardening.rules
+    mode: '0640'
+    owner: root
+    group: root
+  notify: restart auditd

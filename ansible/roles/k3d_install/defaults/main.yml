@@ -1,0 +1,13 @@
+---
+# Default variables for k3d installation
+
+# Cluster configuration
+k8s_cluster_name: "local-cluster"
+k8s_api_port: 6550
+
+# Port mappings (HTTP/HTTPS)
+k3d_http_port: 80
+k3d_https_port: 443
+
+# Storage directory on host
+k3d_storage_dir: "/data/k3d-storage"

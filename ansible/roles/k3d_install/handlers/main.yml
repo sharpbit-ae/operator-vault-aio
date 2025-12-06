@@ -1,0 +1,7 @@
+---
+# Handlers for k3d installation
+
+- name: restart docker
+  ansible.builtin.systemd:
+    name: docker
+    state: restarted

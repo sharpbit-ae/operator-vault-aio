@@ -1,0 +1,28 @@
+---
+wireguard_interface: "wg0"
+wireguard_port: 51820
+wireguard_network: "10.10.10.0/24"
+wireguard_hub_ip: "10.10.10.1"
+wireguard_hub_endpoint: "10.0.0.1:51820"
+
+# This VM's WireGuard tunnel IP - MUST be set per host
+# For vault-aio this defaults to 10.10.10.20
+wireguard_tunnel_ip: "10.10.10.20"
+
+# Private key - generated if not provided
+wireguard_private_key: ""
+
+# Peer configuration - list of peers to connect to
+wireguard_peers: []
+
+# PersistentKeepalive Configuration
+# For spoke nodes (non-hub VMs):
+# - Sends keepalive packets every 25 seconds to maintain NAT mappings
+# - Prevents connection timeout through stateful firewalls
+# - Essential for reliable long-lived VPN connections
+wireguard_persistent_keepalive: 25
+
+# Role assignment for determining keepalive behavior
+# Set to 'hub' for the central relay node (10.8.0.1)
+# Set to 'spoke' for all other VMs
+wireguard_node_role: "spoke"  # Override per-host as needed

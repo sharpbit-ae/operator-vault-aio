@@ -1,0 +1,185 @@
+---
+# Main task file for k3d Installation - Phase 3
+
+# ============ Check Dependencies ============
+- name: Check dependencies
+  include_tasks: check_dependencies.yml
+  tags: [always, dependencies]
+
+# ============ Docker Installation ============
+- name: Include Docker installation tasks
+  include_tasks: install_docker.yml
+  tags: docker
+
+# ============ k3d Installation ============
+- name: Install k3d
+  ansible.builtin.shell: |
+    curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+  args:
+    creates: /usr/local/bin/k3d
+  tags: k3d
+
+- name: Create k3d storage directory on host
+  ansible.builtin.file:
+    path: "{{ k3d_storage_dir }}"
+    state: directory
+    mode: '0755'
+  tags: k3d
+
+- name: Check if k3d cluster exists
+  ansible.builtin.shell: k3d cluster list | grep {{ k8s_cluster_name }}
+  register: k3d_cluster_check
+  failed_when: false
+  changed_when: false
+  tags: k3d
+
+- name: Create k3d cluster with persistent storage
+  ansible.builtin.shell: |
+    k3d cluster create {{ k8s_cluster_name }} \
+      --api-port {{ k8s_api_port }} \
+      --servers 1 \
+      --agents 0 \
+      --port "{{ k3d_http_port }}:80@loadbalancer" \
+      --port "{{ k3d_https_port }}:443@loadbalancer" \
+      --volume {{ k3d_storage_dir }}:/var/lib/rancher/k3s/storage@server:0 \
+      --volume /var/run/docker.sock:/var/run/docker.sock@server:0 \
+      --volume /var/lib/docker/containers:/var/lib/docker/containers:ro@server:0 \
+      --k3s-arg "--disable=traefik@server:0"
+  when: k3d_cluster_check.rc != 0
+  tags: k3d
+
+# ============ Kubeconfig Setup ============
+- name: Create .kube directory for root
+  ansible.builtin.file:
+    path: "/root/.kube"
+    state: directory
+    mode: '0755'
+  tags: kubeconfig
+
+- name: Get kubeconfig from k3d
+  ansible.builtin.shell: k3d kubeconfig get {{ k8s_cluster_name }} > /root/.kube/config
+  args:
+    creates: /root/.kube/config
+  tags: kubeconfig
+
+- name: Set KUBECONFIG environment variable
+  ansible.builtin.lineinfile:
+    path: /etc/environment
+    line: 'KUBECONFIG=/root/.kube/config'
+    state: present
+  tags: kubeconfig
+
+- name: Create .kube directory for current user
+  ansible.builtin.file:
+    path: "/home/{{ ansible_user_id }}/.kube"
+    state: directory
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_id }}"
+    mode: '0755'
+  tags: kubeconfig
+
+- name: Copy kubeconfig to current user home
+  ansible.builtin.copy:
+    src: /root/.kube/config
+    dest: "/home/{{ ansible_user_id }}/.kube/config"
+    remote_src: yes
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_id }}"
+    mode: '0600'
+  tags: kubeconfig
+
+# Setup for service accounts if they exist
+- name: Check if svc_ansible user exists
+  ansible.builtin.shell: id svc_ansible
+  register: svc_ansible_check
+  failed_when: false
+  changed_when: false
+  tags: kubeconfig
+
+- name: Check if kubeadmin user exists
+  ansible.builtin.shell: id kubeadmin
+  register: kubeadmin_check
+  failed_when: false
+  changed_when: false
+  tags: kubeconfig
+
+- name: Setup kubeconfig for svc_ansible
+  block:
+    - name: Create .kube directory for svc_ansible
+      ansible.builtin.file:
+        path: /home/svc_ansible/.kube
+        state: directory
+        owner: svc_ansible
+        group: svc_ansible
+        mode: '0755'
+    - name: Copy kubeconfig to svc_ansible home
+      ansible.builtin.copy:
+        src: /root/.kube/config
+        dest: /home/svc_ansible/.kube/config
+        remote_src: yes
+        owner: svc_ansible
+        group: svc_ansible
+        mode: '0600'
+    - name: Add KUBECONFIG to svc_ansible .bashrc
+      ansible.builtin.lineinfile:
+        path: /home/svc_ansible/.bashrc
+        line: 'export KUBECONFIG=~/.kube/config'
+        state: present
+        owner: svc_ansible
+        group: svc_ansible
+  when: svc_ansible_check.rc == 0
+  tags: kubeconfig
+
+- name: Setup kubeconfig for kubeadmin
+  block:
+    - name: Create .kube directory for kubeadmin
+      ansible.builtin.file:
+        path: /home/kubeadmin/.kube
+        state: directory
+        owner: kubeadmin
+        group: kubeadmin
+        mode: '0755'
+    - name: Copy kubeconfig to kubeadmin home
+      ansible.builtin.copy:
+        src: /root/.kube/config
+        dest: /home/kubeadmin/.kube/config
+        remote_src: yes
+        owner: kubeadmin
+        group: kubeadmin
+        mode: '0600'
+    - name: Add KUBECONFIG to kubeadmin .bashrc
+      ansible.builtin.lineinfile:
+        path: /home/kubeadmin/.bashrc
+        line: 'export KUBECONFIG=~/.kube/config'
+        state: present
+        owner: kubeadmin
+        group: kubeadmin
+  when: kubeadmin_check.rc == 0
+  tags: kubeconfig
+
+# ============ Wait for Cluster ============
+- name: Wait for cluster to be ready
+  ansible.builtin.shell: kubectl get nodes
+  register: nodes_ready
+  retries: 30
+  delay: 10
+  until: nodes_ready.rc == 0
+  tags: k3d
+
+# ============ Summary ============
+- name: Display k3d installation summary
+  ansible.builtin.debug:
+    msg:
+      - "=== Phase 3: k3d Installation Complete ==="
+      - "Cluster Name: {{ k8s_cluster_name }}"
+      - "API Port: {{ k8s_api_port }}"
+      - "HTTP Port: {{ k3d_http_port }}"
+      - "HTTPS Port: {{ k3d_https_port }}"
+      - "Storage: {{ k3d_storage_dir }}"
+      - ""
+      - "✓ Docker installed and hardened"
+      - "✓ k3d cluster created and running"
+      - "✓ kubectl configured for all users"
+      - ""
+      - "Cluster is ready for Phase 4 (ArgoCD installation)"
+  tags: always

@@ -1,0 +1,73 @@
+---
+# SSH Hardening tasks
+
+- name: Ensure SSH directory exists
+  ansible.builtin.file:
+    path: /etc/ssh/sshd_config.d
+    state: directory
+    mode: '0755'
+
+- name: Configure SSH hardening
+  ansible.builtin.copy:
+    content: |
+      # CIS Hardening - SSH Configuration
+      Port {{ ssh_port }}
+      Protocol 2
+
+      # Authentication
+      PermitRootLogin {{ ssh_permit_root_login }}
+      PasswordAuthentication {{ ssh_password_authentication }}
+      PubkeyAuthentication yes
+      PermitEmptyPasswords no
+      ChallengeResponseAuthentication no
+      KerberosAuthentication no
+      GSSAPIAuthentication no
+
+      # Security settings
+      MaxAuthTries {{ ssh_max_auth_tries }}
+      MaxSessions {{ ssh_max_sessions }}
+      LoginGraceTime 60
+      ClientAliveInterval 300
+      ClientAliveCountMax 2
+      MaxStartups 10:30:60
+
+      # Ciphers and algorithms (modern, secure only)
+      Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr
+      MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512,hmac-sha2-256
+      KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group-exchange-sha256
+
+      # Logging
+      SyslogFacility AUTHPRIV
+      LogLevel VERBOSE
+
+      # Other security
+      X11Forwarding no
+      PrintMotd no
+      PrintLastLog yes
+      TCPKeepAlive yes
+      Compression delayed
+      UseDNS no
+      PermitUserEnvironment no
+      AllowAgentForwarding no
+      AllowTcpForwarding no
+      Banner /etc/issue.net
+    dest: /etc/ssh/sshd_config.d/99-cis-hardening.conf
+    mode: '0600'
+    owner: root
+    group: root
+  notify: restart sshd
+
+- name: Create SSH banner
+  ansible.builtin.copy:
+    content: |
+      ***************************************************************************
+      AUTHORIZED ACCESS ONLY
+
+      This system is for authorized use only. All activity is monitored and
+      logged. Unauthorized access is prohibited and will be prosecuted to the
+      fullest extent of the law.
+      ***************************************************************************
+    dest: /etc/issue.net
+    mode: '0644'
+    owner: root
+    group: root

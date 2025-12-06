@@ -1,0 +1,93 @@
+---
+# Main task file for ArgoCD Installation - Phase 4
+
+# ============ Check Dependencies ============
+- name: Check dependencies
+  include_tasks: check_dependencies.yml
+  tags: [always, dependencies]
+
+# ============ ArgoCD Installation ============
+- name: Create argocd namespace
+  ansible.builtin.shell: kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
+  tags: argocd
+
+- name: Check if ArgoCD is already installed
+  ansible.builtin.shell: kubectl get deployment argocd-server -n argocd
+  register: argocd_check
+  failed_when: false
+  changed_when: false
+  tags: argocd
+
+- name: Install ArgoCD
+  ansible.builtin.shell: |
+    kubectl apply -n argocd -f {{ argocd_manifest_url }}
+  when: argocd_check.rc != 0
+  tags: argocd
+
+- name: Wait for ArgoCD to be ready
+  ansible.builtin.shell: kubectl wait --for=condition=available --timeout=600s deployment/argocd-server -n argocd
+  retries: 10
+  delay: 30
+  tags: argocd
+
+# ============ Optional Ingress Configuration ============
+- name: Patch ArgoCD server service to ClusterIP (for ingress access)
+  ansible.builtin.shell: |
+    kubectl patch svc argocd-server -n argocd -p '{"spec": {"type": "ClusterIP"}}'
+  when: create_ingress | bool
+  tags: [argocd, ingress]
+
+- name: Create ArgoCD Ingress
+  ansible.builtin.shell: |
+    kubectl apply -f - <<EOF
+    apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    metadata:
+      name: argocd-server
+      namespace: argocd
+      annotations:
+        nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+        nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    spec:
+      ingressClassName: {{ ingress_class }}
+      rules:
+      - host: argocd.{{ k8s_domain }}
+        http:
+          paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: argocd-server
+                port:
+                  number: 443
+    EOF
+  when: create_ingress | bool
+  tags: [argocd, ingress]
+
+# ============ Get Admin Password ============
+- name: Get ArgoCD initial admin password
+  ansible.builtin.shell: kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d
+  register: argocd_password
+  changed_when: false
+  tags: argocd
+
+# ============ Summary ============
+- name: Display ArgoCD installation summary
+  ansible.builtin.debug:
+    msg:
+      - "=== Phase 4: ArgoCD Installation Complete ==="
+      - ""
+      - "✓ ArgoCD installed in 'argocd' namespace"
+      - "✓ ArgoCD server is ready"
+      - ""
+      - "Access ArgoCD:"
+      - "  Port-forward: kubectl port-forward svc/argocd-server -n argocd 8080:443"
+      - "  Then visit: https://localhost:8080"
+      - ""
+      - "Login Credentials:"
+      - "  Username: admin"
+      - "  Password: {{ argocd_password.stdout }}"
+      - ""
+      - "ArgoCD is ready for Phase 5 (application deployment)"
+  tags: always

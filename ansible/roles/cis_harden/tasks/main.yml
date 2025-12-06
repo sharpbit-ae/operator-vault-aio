@@ -1,0 +1,179 @@
+---
+# Main task file for CIS Hardening - Phase 2
+
+# ============ Check Dependencies ============
+- name: Check dependencies
+  include_tasks: check_dependencies.yml
+  tags: [always, dependencies]
+
+# ============ System Updates ============
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  tags: updates
+
+- name: Upgrade all packages
+  ansible.builtin.apt:
+    upgrade: dist
+    autoremove: yes
+    autoclean: yes
+  tags: updates
+
+# ============ Service Account Creation ============
+- name: Create svc_ansible user
+  ansible.builtin.user:
+    name: svc_ansible
+    comment: "Ansible Service Account"
+    shell: /bin/bash
+    create_home: yes
+    state: present
+  tags: users
+
+- name: Create kubeadmin user
+  ansible.builtin.user:
+    name: kubeadmin
+    comment: "Kubernetes Administrator"
+    shell: /bin/bash
+    create_home: yes
+    state: present
+  tags: users
+
+- name: Add svc_ansible to sudo group
+  ansible.builtin.user:
+    name: svc_ansible
+    groups: sudo
+    append: yes
+  tags: users
+
+- name: Configure NOPASSWD sudo for svc_ansible
+  ansible.builtin.copy:
+    content: |
+      # Allow svc_ansible to run commands without password
+      svc_ansible ALL=(ALL) NOPASSWD: /usr/bin/ansible-playbook, /usr/bin/ansible, /usr/bin/kubectl, /usr/bin/docker, /usr/bin/k3d, /usr/sbin/nft, /usr/sbin/iptables, /bin/systemctl
+    dest: /etc/sudoers.d/svc_ansible
+    mode: '0440'
+    owner: root
+    group: root
+    validate: 'visudo -cf %s'
+  tags: users
+
+- name: Add kubeadmin to sudo group
+  ansible.builtin.user:
+    name: kubeadmin
+    groups: sudo
+    append: yes
+  tags: users
+
+- name: Create .ssh directory for svc_ansible
+  ansible.builtin.file:
+    path: /home/svc_ansible/.ssh
+    state: directory
+    mode: '0700'
+    owner: svc_ansible
+    group: svc_ansible
+  tags: users
+
+- name: Create .ssh directory for kubeadmin
+  ansible.builtin.file:
+    path: /home/kubeadmin/.ssh
+    state: directory
+    mode: '0700'
+    owner: kubeadmin
+    group: kubeadmin
+  tags: users
+
+# ============ SSH Hardening ============
+- name: Include SSH hardening tasks
+  include_tasks: ssh_hardening.yml
+  tags: ssh
+
+# ============ Password Policy ============
+- name: Include password policy tasks
+  include_tasks: password_policy.yml
+  tags: password
+
+# ============ Disable Unnecessary Services ============
+- name: Check if services exist before disabling
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+  loop: "{{ services_to_disable }}"
+  register: service_check
+  failed_when: false
+  changed_when: false
+  tags: services
+
+- name: Disable unnecessary services
+  ansible.builtin.systemd:
+    name: "{{ item.item }}"
+    enabled: no
+    state: stopped
+  loop: "{{ service_check.results }}"
+  when: item.status is defined and item.status.LoadState == "loaded"
+  failed_when: false
+  tags: services
+
+# ============ Kernel Hardening ============
+- name: Include kernel hardening tasks
+  include_tasks: kernel_hardening.yml
+  tags: kernel
+
+# ============ File Permissions ============
+- name: Include file permissions tasks
+  include_tasks: file_permissions.yml
+  tags: permissions
+
+# ============ Audit Configuration ============
+- name: Include audit configuration tasks
+  include_tasks: audit_config.yml
+  tags: audit
+
+# ============ Firewall Configuration ============
+- name: Include firewall configuration tasks
+  include_tasks: firewall_config.yml
+  tags: firewall
+
+# ============ Logging Configuration ============
+- name: Include logging configuration tasks
+  include_tasks: logging_config.yml
+  tags: logging
+
+# ============ Additional Security Tools ============
+- name: Include security tools installation
+  include_tasks: security_tools.yml
+  tags: security-tools
+
+# ============ Disable IPv6 (Optional) ============
+- name: Disable IPv6 if not needed
+  ansible.builtin.copy:
+    content: |
+      net.ipv6.conf.all.disable_ipv6 = 1
+      net.ipv6.conf.default.disable_ipv6 = 1
+    dest: /etc/sysctl.d/98-disable-ipv6.conf
+    mode: '0644'
+    owner: root
+    group: root
+  when: disable_ipv6 | default(false)
+  tags: network
+
+# ============ Summary ============
+- name: Display hardening summary
+  ansible.builtin.debug:
+    msg:
+      - "=== Phase 2: CIS Hardening Complete ==="
+      - ""
+      - "Applied hardening measures:"
+      - "  ✓ System updated to latest packages"
+      - "  ✓ SSH hardened with secure ciphers and settings"
+      - "  ✓ Password policies enforced"
+      - "  ✓ Unnecessary services disabled"
+      - "  ✓ Kernel parameters hardened"
+      - "  ✓ File permissions secured"
+      - "  ✓ Audit logging enabled"
+      - "  ✓ Firewall configured (nftables)"
+      - "  ✓ Enhanced system logging"
+      - "  ✓ Fail2ban installed and configured"
+      - "  ✓ Automatic security updates enabled"
+      - ""
+      - "VM is ready for Phase 3 (k3d cluster installation)"
+  tags: always

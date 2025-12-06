@@ -1,0 +1,26 @@
+---
+# Default variables for VM creation
+
+# Base Debian cloud image
+base_image_url: "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2"
+base_image_dir: "/var/lib/libvirt/images"
+base_image_name: "debian-12-generic-amd64.qcow2"
+base_image_path: "{{ base_image_dir }}/{{ base_image_name }}"
+
+# VM storage location
+vm_images_dir: "/home/vm-data"
+vm_disk_path: "{{ vm_images_dir }}/{{ vm_name }}.qcow2"
+
+# Default VM resources (can be overridden)
+vm_disk_size_gb: 50
+vm_memory_mb: 4096
+vm_vcpus: 2
+
+# Network defaults
+vm_netmask: "24"
+vm_network_interface: "enp1s0"
+
+# Network creation flags
+create_network: true
+recreate_network: false
+recreate_vm: false

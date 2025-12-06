@@ -1,0 +1,70 @@
+---
+# Dependency checking for Phase 1: VM Creation
+
+- name: Check for required binaries
+  ansible.builtin.command:
+    cmd: "which {{ item }}"
+  register: binary_check
+  failed_when: false
+  changed_when: false
+  loop:
+    - virsh
+    - virt-install
+    - virt-customize
+    - qemu-img
+
+- name: Fail if required binaries are missing
+  ansible.builtin.fail:
+    msg: "Required binary '{{ item.item }}' not found. Please install libvirt, qemu-kvm, and libguestfs-tools packages."
+  when: item.rc != 0
+  loop: "{{ binary_check.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Check libvirt daemon status
+  ansible.builtin.systemd:
+    name: libvirtd
+  register: libvirtd_status
+  failed_when: false
+
+- name: Fail if libvirtd is not running
+  ansible.builtin.fail:
+    msg: "libvirtd daemon is not running. Please start it with: systemctl start libvirtd"
+  when: libvirtd_status.status.ActiveState != "active"
+
+- name: Check for kernel modules
+  ansible.builtin.command:
+    cmd: "lsmod | grep {{ item }}"
+  register: module_check
+  failed_when: false
+  changed_when: false
+  loop:
+    - kvm
+    - kvm_intel  # or kvm_amd
+    - vhost_net
+
+- name: Warn if KVM modules not loaded
+  ansible.builtin.debug:
+    msg: "WARNING: KVM kernel modules may not be loaded. VM performance may be degraded."
+  when: module_check.results[0].rc != 0
+
+- name: Check available disk space
+  ansible.builtin.shell: "df -BG {{ vm_images_dir | dirname }} | tail -1 | awk '{print $4}' | sed 's/G//'"
+  register: disk_space
+  changed_when: false
+
+- name: Warn if low disk space
+  ansible.builtin.debug:
+    msg: "WARNING: Low disk space available ({{ disk_space.stdout }}GB). VM creation may fail."
+  when: disk_space.stdout | int < vm_disk_size_gb | default(50) | int + 10
+
+- name: Display dependency check summary
+  ansible.builtin.debug:
+    msg:
+      - "=== Phase 1 Dependency Check Complete ==="
+      - "✓ libvirt tools found (virsh, virt-install, virt-customize, qemu-img)"
+      - "✓ libvirtd daemon running"
+      - "✓ Sufficient disk space available"
+      - ""
+      - "Note: For routed network mode, ensure host routing is configured:"
+      - "  ip route add {{ vm_ip_address }}/{{ vm_netmask }} via {{ vm_network_gateway }} dev {{ vm_libvirt_network }}"

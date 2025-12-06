@@ -1,0 +1,52 @@
+---
+# Default variables for CIS hardening
+
+# SSH hardening settings
+ssh_port: 22
+ssh_permit_root_login: "no"
+ssh_password_authentication: "no"
+ssh_max_auth_tries: 3
+ssh_max_sessions: 10
+
+# Password policy
+password_max_days: 90
+password_min_days: 1
+password_warn_age: 7
+password_min_length: 14
+
+# Services to disable
+services_to_disable:
+  - avahi-daemon
+  - cups
+  - rpcbind
+  - rsync
+
+# Optional IPv6 disable
+disable_ipv6: false
+
+# Kernel parameters for hardening
+sysctl_hardening:
+  # Network security
+  net.ipv4.conf.all.send_redirects: 0
+  net.ipv4.conf.default.send_redirects: 0
+  net.ipv4.conf.all.accept_redirects: 0
+  net.ipv4.conf.default.accept_redirects: 0
+  net.ipv4.conf.all.secure_redirects: 0
+  net.ipv4.conf.default.secure_redirects: 0
+  net.ipv4.conf.all.accept_source_route: 0
+  net.ipv4.conf.default.accept_source_route: 0
+  net.ipv4.icmp_echo_ignore_broadcasts: 1
+  net.ipv4.icmp_ignore_bogus_error_responses: 1
+  net.ipv4.conf.all.rp_filter: 1
+  net.ipv4.conf.default.rp_filter: 1
+  net.ipv4.tcp_syncookies: 1
+  net.ipv6.conf.all.accept_redirects: 0
+  net.ipv6.conf.default.accept_redirects: 0
+  net.ipv6.conf.all.accept_source_route: 0
+  net.ipv6.conf.default.accept_source_route: 0
+  # Kernel hardening
+  kernel.randomize_va_space: 2
+  kernel.exec-shield: 1
+  kernel.dmesg_restrict: 1
+  kernel.kptr_restrict: 2
+  fs.suid_dumpable: 0

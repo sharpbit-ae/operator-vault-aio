@@ -1,6 +1,7 @@
 ---
 # Vault AIO Orchestrator
 # Creates a standalone Vault VM with integrated monitoring, logging, tracing, and NTP
+# This playbook is self-contained - all roles are included in this repository
 
 # Step 1: Create Vault AIO VM on hypervisor (localhost)
 - name: Create Vault AIO VM
@@ -9,13 +10,10 @@
   become: true
   gather_facts: true
 
-  vars:
-    phases_dir: "/home/aeonadmin/aeon-infra/phases"
-
   tasks:
     - name: Run Phase 1 - VM Creation
       include_role:
-        name: "/home/aeonadmin/aeon-infra/phases/phase-1-vm-create/roles/vm_create"
+        name: vm_create
       vars:
         vm_name: "vault-aio"
         vm_hostname: "vault-aio.aeon.local"
@@ -42,9 +40,6 @@
   become: true
   gather_facts: true
 
-  vars:
-    phases_dir: "/home/aeonadmin/aeon-infra/phases"
-
   tasks:
     - name: Wait for VM to be reachable
       wait_for_connection:
@@ -55,26 +50,28 @@
 
     - name: Run Phase 2 - CIS Hardening
       include_role:
-        name: "/home/aeonadmin/aeon-infra/phases/phase-2-cis-harden/roles/cis_harden"
+        name: cis_harden
 
     - name: Run Phase 2.5 - WireGuard Mesh
       include_role:
-        name: "/home/aeonadmin/aeon-infra/phases/phase-2.5-wireguard-mesh/roles/wireguard_mesh"
+        name: wireguard_mesh
       vars:
         wireguard_tunnel_ip: "10.10.10.20"
+        wireguard_private_key: "{{ lookup('env', 'WIREGUARD_PRIVATE_KEY') | default(omit) }}"
+        wireguard_peers: "{{ lookup('env', 'WIREGUARD_PEERS') | default([]) }}"
 
-    - name: Run Phase 3 - k3d Installation
+    - name: Run Phase 3 - k3s Installation
       include_role:
-        name: "/home/aeonadmin/aeon-infra/phases/phase-3-k3d-install/roles/k3d_install"
+        name: k3d_install
       vars:
         k8s_cluster_name: "vault-aio"
 
     - name: Run Phase 4 - ArgoCD Installation
       include_role:
-        name: "/home/aeonadmin/aeon-infra/phases/phase-4-argocd-install/roles/argocd_install"
+        name: argocd_install
 
-# Step 5: Deploy Vault AIO Stack
-- name: Deploy Vault AIO Stack
+# Step 5: Deploy Infrastructure Components
+- name: Deploy Infrastructure Components
   hosts: vault_aio
   become: true
   gather_facts: true
@@ -95,7 +92,63 @@
         dest: /opt/vault-aio/
         recursive: yes
 
-    - name: Apply Vault AIO manifests
+    - name: Install cert-manager CRDs
+      shell: |
+        export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+        kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.4/cert-manager.crds.yaml
+      register: certmgr_crds
+      retries: 3
+      delay: 10
+      until: certmgr_crds.rc == 0
+
+    - name: Install cert-manager
+      shell: |
+        export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+        kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.4/cert-manager.yaml
+      register: certmgr_install
+      retries: 3
+      delay: 10
+      until: certmgr_install.rc == 0
+
+    - name: Wait for cert-manager to be ready
+      shell: |
+        export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+        kubectl wait --for=condition=Available deployment/cert-manager -n cert-manager --timeout=120s
+        kubectl wait --for=condition=Available deployment/cert-manager-webhook -n cert-manager --timeout=120s
+        kubectl wait --for=condition=Available deployment/cert-manager-cainjector -n cert-manager --timeout=120s
+      register: certmgr_ready
+      retries: 5
+      delay: 15
+      until: certmgr_ready.rc == 0
+
+    - name: Apply Traefik (kube-system namespace)
+      shell: |
+        export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+        kubectl apply -f /opt/vault-aio/ingress/traefik.yaml
+      register: traefik_result
+      retries: 3
+      delay: 10
+      until: traefik_result.rc == 0
+
+    - name: Wait for Traefik to be ready
+      shell: |
+        export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+        kubectl wait --for=condition=Available deployment/traefik -n kube-system --timeout=120s
+      register: traefik_ready
+      retries: 5
+      delay: 15
+      until: traefik_ready.rc == 0
+
+    - name: Apply cert-manager ClusterIssuer
+      shell: |
+        export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+        kubectl apply -f /opt/vault-aio/cert-manager/clusterissuer.yaml
+      register: issuer_result
+      retries: 3
+      delay: 10
+      until: issuer_result.rc == 0
+
+    - name: Apply Vault AIO manifests via kustomize
       shell: |
         export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
         kubectl apply -k /opt/vault-aio/
@@ -177,6 +230,83 @@
       loop: [0, 1, 2]
       when: vault_init is changed
 
+    - name: Generate random passwords for basic auth
+      set_fact:
+        prometheus_password: "{{ lookup('password', '/dev/null length=24 chars=ascii_letters,digits') }}"
+        alertmanager_password: "{{ lookup('password', '/dev/null length=24 chars=ascii_letters,digits') }}"
+        loki_password: "{{ lookup('password', '/dev/null length=24 chars=ascii_letters,digits') }}"
+        tempo_password: "{{ lookup('password', '/dev/null length=24 chars=ascii_letters,digits') }}"
+        grafana_password: "{{ lookup('password', '/dev/null length=24 chars=ascii_letters,digits') }}"
+
+    - name: Create basic auth secrets
+      shell: |
+        export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+        # Create htpasswd format secrets for Traefik basic auth
+        kubectl create secret generic prometheus-basic-auth -n vault-aio \
+          --from-literal=users="admin:$(openssl passwd -apr1 '{{ prometheus_password }}')" \
+          --dry-run=client -o yaml | kubectl apply -f -
+        kubectl create secret generic alertmanager-basic-auth -n vault-aio \
+          --from-literal=users="admin:$(openssl passwd -apr1 '{{ alertmanager_password }}')" \
+          --dry-run=client -o yaml | kubectl apply -f -
+        kubectl create secret generic loki-basic-auth -n vault-aio \
+          --from-literal=users="admin:$(openssl passwd -apr1 '{{ loki_password }}')" \
+          --dry-run=client -o yaml | kubectl apply -f -
+        kubectl create secret generic tempo-basic-auth -n vault-aio \
+          --from-literal=users="admin:$(openssl passwd -apr1 '{{ tempo_password }}')" \
+          --dry-run=client -o yaml | kubectl apply -f -
+      register: basic_auth_created
+
+    - name: Update Grafana admin password
+      shell: |
+        export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+        kubectl create secret generic grafana-admin -n vault-aio \
+          --from-literal=password='{{ grafana_password }}' \
+          --dry-run=client -o yaml | kubectl apply -f -
+      register: grafana_secret_updated
+
+    - name: Restart Grafana to pick up new password
+      shell: |
+        export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+        kubectl rollout restart deployment/grafana -n vault-aio
+      when: grafana_secret_updated is changed
+
+    - name: Save credentials
+      copy:
+        content: |
+          # Vault AIO Credentials
+          # Generated: {{ ansible_date_time.iso8601 }}
+
+          ## Grafana
+          URL: https://grafana.vault-aio.local
+          Username: admin
+          Password: {{ grafana_password }}
+
+          ## Prometheus (Basic Auth)
+          URL: https://prometheus.vault-aio.local
+          Username: admin
+          Password: {{ prometheus_password }}
+
+          ## Alertmanager (Basic Auth)
+          URL: https://alertmanager.vault-aio.local
+          Username: admin
+          Password: {{ alertmanager_password }}
+
+          ## Loki (Basic Auth)
+          URL: https://loki.vault-aio.local
+          Username: admin
+          Password: {{ loki_password }}
+
+          ## Tempo (Basic Auth)
+          URL: https://tempo.vault-aio.local
+          Username: admin
+          Password: {{ tempo_password }}
+
+          ## Vault
+          URL: https://vault.vault-aio.local
+          See /root/vault-aio-init-*.json for root token and unseal keys
+        dest: "/root/vault-aio-credentials.txt"
+        mode: '0600'
+
     - name: Display completion message
       debug:
         msg:
@@ -185,11 +315,12 @@
           - "VM IP: 10.0.0.20"
           - "WireGuard IP: 10.10.10.20"
           - ""
-          - "Access services via port-forward:"
-          - "  Grafana:  kubectl port-forward -n vault-aio svc/grafana 3000:3000"
-          - "  Vault:    kubectl port-forward -n vault-aio svc/vault 8200:8200"
-          - "  Prometheus: kubectl port-forward -n vault-aio svc/prometheus 9090:9090"
+          - "Access URLs (add to /etc/hosts: 10.0.0.20 vault-aio.local vault.vault-aio.local grafana.vault-aio.local prometheus.vault-aio.local):"
+          - "  Homepage:    https://vault-aio.local"
+          - "  Vault:       https://vault.vault-aio.local"
+          - "  Grafana:     https://grafana.vault-aio.local"
+          - "  Prometheus:  https://prometheus.vault-aio.local"
+          - "  Alertmanager: https://alertmanager.vault-aio.local"
           - ""
-          - "Grafana credentials: admin / vault-aio-admin"
-          - ""
+          - "Credentials saved to: /root/vault-aio-credentials.txt"
           - "Vault init keys saved to: /root/vault-aio-init-*.json"

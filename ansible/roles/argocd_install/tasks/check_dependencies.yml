@@ -1,0 +1,34 @@
+---
+# Dependency checking for Phase 4: ArgoCD Installation
+
+- name: Check if kubectl is available
+  ansible.builtin.command:
+    cmd: which kubectl
+  register: kubectl_check
+  failed_when: false
+  changed_when: false
+
+- name: Fail if kubectl not available
+  ansible.builtin.fail:
+    msg: "kubectl is required. Please install it or run Phase 3 first."
+  when: kubectl_check.rc != 0
+
+- name: Check if k3d cluster is running
+  ansible.builtin.shell: kubectl get nodes
+  register: cluster_check
+  failed_when: false
+  changed_when: false
+
+- name: Fail if cluster not running
+  ansible.builtin.fail:
+    msg: "No Kubernetes cluster detected. Please run Phase 3 (k3d installation) first."
+  when: cluster_check.rc != 0
+
+- name: Display dependency check summary
+  ansible.builtin.debug:
+    msg:
+      - "=== Phase 4 Dependency Check Complete ==="
+      - "✓ kubectl available"
+      - "✓ Kubernetes cluster running"
+      - ""
+      - "Ready to install ArgoCD"

@@ -1,0 +1,55 @@
+---
+# Dependency checking for Phase 2: CIS Hardening
+
+- name: Check if running on Debian
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['os_family'] == "Debian"
+    fail_msg: "This phase only supports Debian-based systems"
+
+- name: Check Python3 availability
+  ansible.builtin.command:
+    cmd: which python3
+  register: python3_check
+  failed_when: false
+  changed_when: false
+
+- name: Fail if Python3 not available
+  ansible.builtin.fail:
+    msg: "Python3 is required for Ansible. Install with: apt install python3"
+  when: python3_check.rc != 0
+
+- name: Check sudo availability
+  ansible.builtin.command:
+    cmd: which sudo
+  register: sudo_check
+  failed_when: false
+  changed_when: false
+
+- name: Fail if sudo not available
+  ansible.builtin.fail:
+    msg: "sudo is required. Install with: apt install sudo"
+  when: sudo_check.rc != 0
+
+- name: Check systemd availability
+  ansible.builtin.command:
+    cmd: systemctl --version
+  register: systemd_check
+  failed_when: false
+  changed_when: false
+
+- name: Fail if systemd not available
+  ansible.builtin.fail:
+    msg: "systemd is required for service management"
+  when: systemd_check.rc != 0
+
+- name: Display dependency check summary
+  ansible.builtin.debug:
+    msg:
+      - "=== Phase 2 Dependency Check Complete ==="
+      - "✓ Debian-based OS detected"
+      - "✓ Python3 available"
+      - "✓ sudo available"
+      - "✓ systemd available"
+      - ""
+      - "Ready to apply CIS hardening"

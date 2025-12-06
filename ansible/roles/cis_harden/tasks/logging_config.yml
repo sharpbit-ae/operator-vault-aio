@@ -1,0 +1,39 @@
+---
+# Logging configuration tasks
+
+- name: Ensure rsyslog is installed
+  ansible.builtin.apt:
+    name: rsyslog
+    state: present
+
+- name: Enable and start rsyslog
+  ansible.builtin.systemd:
+    name: rsyslog
+    enabled: yes
+    state: started
+
+- name: Configure rsyslog for enhanced logging
+  ansible.builtin.copy:
+    content: |
+      # CIS Hardening - Enhanced logging
+      *.emerg                                 :omusrmsg:*
+      auth,authpriv.*                         /var/log/auth.log
+      *.*;auth,authpriv.none                  -/var/log/syslog
+      cron.*                                  /var/log/cron.log
+      daemon.*                                -/var/log/daemon.log
+      kern.*                                  -/var/log/kern.log
+      mail.*                                  -/var/log/mail.log
+      user.*                                  -/var/log/user.log
+    dest: /etc/rsyslog.d/50-cis-hardening.conf
+    mode: '0644'
+    owner: root
+    group: root
+  notify: restart rsyslog
+
+- name: Set proper permissions on log files
+  ansible.builtin.file:
+    path: /var/log
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root

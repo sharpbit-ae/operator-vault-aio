@@ -1,0 +1,255 @@
+---
+# VM Creation Role - Phase 1
+# Creates a Debian 12 VM using libvirt with pre-configured settings
+
+# ============ Check Dependencies ============
+- name: Check dependencies
+  include_tasks: check_dependencies.yml
+  tags: [always, dependencies]
+
+# ============ Validate Variables ============
+- name: Validate required variables
+  ansible.builtin.assert:
+    that:
+      - vm_name is defined
+      - vm_hostname is defined
+      - vm_ip_address is defined
+      - vm_ssh_pubkey is defined
+      - vm_user is defined
+      - vm_user_password is defined
+      - vm_gateway is defined
+      - vm_dns_servers is defined
+      - vm_libvirt_network is defined
+    fail_msg: "Missing required variables for VM creation"
+
+# ============ Create Directories ============
+- name: Create base image directory
+  ansible.builtin.file:
+    path: "{{ base_image_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Create VM images directory
+  ansible.builtin.file:
+    path: "{{ vm_images_dir }}"
+    state: directory
+    mode: "0755"
+
+# ============ Network Setup ============
+- name: Check if libvirt network exists
+  ansible.builtin.command:
+    argv: [virsh, net-info, "{{ vm_libvirt_network }}"]
+  register: net_check
+  failed_when: false
+  changed_when: false
+
+- name: Destroy existing network if recreate requested
+  ansible.builtin.command:
+    argv: [virsh, net-destroy, "{{ vm_libvirt_network }}"]
+  when: net_check.rc == 0 and (recreate_network | default(false) | bool)
+  failed_when: false
+  changed_when: true
+
+- name: Undefine existing network if recreate requested
+  ansible.builtin.command:
+    argv: [virsh, net-undefine, "{{ vm_libvirt_network }}"]
+  when: net_check.rc == 0 and (recreate_network | default(false) | bool)
+  changed_when: true
+
+- name: Generate network XML from template
+  ansible.builtin.template:
+    src: network.xml.j2
+    dest: "/tmp/{{ vm_libvirt_network }}.xml"
+    mode: "0644"
+  when: (net_check.rc != 0 or (recreate_network | default(false) | bool)) and create_network | default(true)
+
+- name: Define libvirt network
+  ansible.builtin.command:
+    argv: [virsh, net-define, "/tmp/{{ vm_libvirt_network }}.xml"]
+  when: (net_check.rc != 0 or (recreate_network | default(false) | bool)) and create_network | default(true)
+  changed_when: true
+
+- name: Start libvirt network
+  ansible.builtin.command:
+    argv: [virsh, net-start, "{{ vm_libvirt_network }}"]
+  when: (net_check.rc != 0 or (recreate_network | default(false) | bool)) and create_network | default(true)
+  register: net_start
+  failed_when: false
+  changed_when: net_start.rc == 0
+
+- name: Enable network autostart
+  ansible.builtin.command:
+    argv: [virsh, net-autostart, "{{ vm_libvirt_network }}"]
+  when: create_network | default(true)
+  changed_when: false
+
+# ============ Download Base Image ============
+- name: Check if base image exists
+  ansible.builtin.stat:
+    path: "{{ base_image_path }}"
+  register: base_image_stat
+
+- name: Download base cloud image
+  ansible.builtin.get_url:
+    url: "{{ base_image_url }}"
+    dest: "{{ base_image_path }}"
+    mode: "0644"
+    timeout: 300
+  when: not base_image_stat.stat.exists
+
+# ============ Check if VM already exists ============
+- name: Check if VM already exists
+  ansible.builtin.command:
+    argv: [virsh, dominfo, "{{ vm_name }}"]
+  register: vm_check
+  failed_when: false
+  changed_when: false
+
+- name: Destroy and undefine existing VM
+  block:
+    - name: Destroy VM
+      ansible.builtin.command: "virsh destroy {{ vm_name }}"
+      failed_when: false
+      changed_when: true
+    - name: Undefine VM
+      ansible.builtin.command: "virsh undefine {{ vm_name }} --remove-all-storage"
+      failed_when: false
+      changed_when: true
+  when: vm_check.rc == 0 and (recreate_vm | default(false) | bool)
+
+# ============ Create VM Disk from Base Image ============
+- name: Remove old VM disk if recreating
+  ansible.builtin.file:
+    path: "{{ vm_disk_path }}"
+    state: absent
+  when: vm_check.rc == 0 and (recreate_vm | default(false) | bool)
+
+- name: Create VM disk from base image
+  ansible.builtin.command:
+    argv:
+      - qemu-img
+      - create
+      - -f
+      - qcow2
+      - -F
+      - qcow2
+      - -b
+      - "{{ base_image_path }}"
+      - "{{ vm_disk_path }}"
+      - "{{ vm_disk_size_gb | default(50) }}G"
+  when: vm_check.rc != 0 or (recreate_vm | default(false) | bool)
+  register: disk_create
+  changed_when: disk_create.rc == 0
+
+# ============ Customize Image with virt-customize ============
+- name: Customize VM image (inject user, SSH keys, network config)
+  ansible.builtin.shell: |
+    virt-customize -a {{ vm_disk_path }} \
+      --hostname {{ vm_hostname }} \
+      --run-command 'useradd -m -s /bin/bash -G sudo {{ vm_user }}' \
+      --password {{ vm_user }}:password:{{ vm_user_password }} \
+      --root-password password:{{ vm_root_password | default(vm_user_password) }} \
+      --mkdir /home/{{ vm_user }}/.ssh \
+      --chmod 0700:/home/{{ vm_user }}/.ssh \
+      --write '/home/{{ vm_user }}/.ssh/authorized_keys:{{ vm_ssh_pubkey }}' \
+      --chmod 0600:/home/{{ vm_user }}/.ssh/authorized_keys \
+      --run-command 'chown -R {{ vm_user }}:{{ vm_user }} /home/{{ vm_user }}/.ssh' \
+      --run-command 'echo "{{ vm_user }} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/{{ vm_user }}' \
+      --chmod 0440:/etc/sudoers.d/{{ vm_user }} \
+      --run-command 'echo "[Match]" > /etc/systemd/network/10-{{ vm_network_interface }}.network' \
+      --run-command 'echo "Name={{ vm_network_interface }}" >> /etc/systemd/network/10-{{ vm_network_interface }}.network' \
+      --run-command 'echo "" >> /etc/systemd/network/10-{{ vm_network_interface }}.network' \
+      --run-command 'echo "[Network]" >> /etc/systemd/network/10-{{ vm_network_interface }}.network' \
+      --run-command 'echo "Address={{ vm_ip_address }}/{{ vm_netmask | default("24") }}" >> /etc/systemd/network/10-{{ vm_network_interface }}.network' \
+      --run-command 'echo "Gateway={{ vm_gateway }}" >> /etc/systemd/network/10-{{ vm_network_interface }}.network' \
+      --run-command 'echo "DNS={{ vm_dns_servers[0] }}" >> /etc/systemd/network/10-{{ vm_network_interface }}.network' \
+      --run-command 'echo "DNS={{ vm_dns_servers[1] }}" >> /etc/systemd/network/10-{{ vm_network_interface }}.network' \
+      --run-command 'systemctl enable systemd-networkd' \
+      --run-command 'systemctl enable systemd-resolved' \
+      --mkdir /etc/ssh/sshd_config.d \
+      --run-command 'echo "PasswordAuthentication yes" > /etc/ssh/sshd_config.d/50-custom.conf' \
+      --run-command 'echo "PermitRootLogin yes" >> /etc/ssh/sshd_config.d/50-custom.conf' \
+      --run-command 'chmod 644 /etc/ssh/sshd_config.d/50-custom.conf' \
+      --run-command 'ssh-keygen -A' \
+      --run-command 'systemctl enable ssh' \
+      --mkdir /data \
+      --selinux-relabel
+  when: vm_check.rc != 0 or (recreate_vm | default(false) | bool)
+  register: virt_customize
+  changed_when: virt_customize.rc == 0
+  timeout: 600
+
+# ============ Deploy VM with virt-install ============
+- name: Deploy VM with virt-install
+  ansible.builtin.command:
+    argv:
+      - virt-install
+      - --name={{ vm_name }}
+      - --memory={{ vm_memory_mb }}
+      - --vcpus={{ vm_vcpus }}
+      - --osinfo=debian12
+      - --disk=path={{ vm_disk_path }},format=qcow2
+      - --network=network={{ vm_libvirt_network }},model=virtio
+      - --graphics=vnc
+      - --import
+      - --noautoconsole
+  when: vm_check.rc != 0 or (recreate_vm | default(false) | bool)
+  register: virt_install_result
+  changed_when: virt_install_result.rc == 0
+
+# ============ Wait for VM to be ready ============
+- name: Wait for VM to boot
+  ansible.builtin.pause:
+    seconds: 30
+  when: virt_install_result is changed
+
+# ============ Test connectivity ============
+- name: Test network connectivity
+  ansible.builtin.command:
+    argv: [ping, -c, "2", "{{ vm_ip_address }}"]
+  register: ping_test
+  failed_when: false
+  changed_when: false
+
+- name: Wait for SSH to be available
+  ansible.builtin.wait_for:
+    host: "{{ vm_ip_address }}"
+    port: 22
+    delay: 10
+    timeout: 300
+    state: started
+
+- name: Test SSH connectivity
+  ansible.builtin.command:
+    argv:
+      - ssh
+      - -i
+      - "{{ vm_ssh_key_path }}"
+      - -o
+      - StrictHostKeyChecking=no
+      - -o
+      - UserKnownHostsFile=/dev/null
+      - -o
+      - ConnectTimeout=10
+      - "{{ vm_user }}@{{ vm_ip_address }}"
+      - hostname
+  register: ssh_test
+  until: ssh_test.rc == 0
+  retries: 10
+  delay: 10
+  changed_when: false
+
+# ============ Summary ============
+- name: Display VM creation summary
+  ansible.builtin.debug:
+    msg:
+      - "=== Phase 1: VM Creation Complete ==="
+      - "VM Name: {{ vm_name }}"
+      - "Hostname: {{ vm_hostname }}"
+      - "IP Address: {{ vm_ip_address }}"
+      - "Network: {{ vm_libvirt_network }}"
+      - "Memory: {{ vm_memory_mb }} MB"
+      - "vCPUs: {{ vm_vcpus }}"
+      - "Disk: {{ vm_disk_size_gb | default(50) }} GB"
+      - ""
+      - "VM is ready for Phase 2 (CIS hardening)"
