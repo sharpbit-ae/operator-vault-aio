@@ -42,7 +42,7 @@
       "pluginVersion": "10.2.2",
       "targets": [
         {
-          "expr": "vault_core_unsealed",
+          "expr": "vault_core_unsealed{job=\"vault\"}",
           "legendFormat": "Seal Status",
           "refId": "A"
         }
@@ -79,7 +79,7 @@
       },
       "targets": [
         {
-          "expr": "vault_token_count",
+          "expr": "vault_token_count{job=\"vault\"}",
           "legendFormat": "Active Tokens",
           "refId": "A"
         }

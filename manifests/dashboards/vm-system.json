@@ -36,7 +36,7 @@
       },
       "targets": [
         {
-          "expr": "100 - (avg(irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+          "expr": "100 - (avg(irate(node_cpu_seconds_total{job=\"integrations/unix\",mode=\"idle\"}[5m])) * 100)",
           "legendFormat": "CPU Usage",
           "refId": "A"
         }
@@ -73,7 +73,7 @@
       },
       "targets": [
         {
-          "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
+          "expr": "(1 - (node_memory_MemAvailable_bytes{job=\"integrations/unix\"} / node_memory_MemTotal_bytes{job=\"integrations/unix\"})) * 100",
           "legendFormat": "Memory Usage",
           "refId": "A"
         }
@@ -110,7 +110,7 @@
       },
       "targets": [
         {
-          "expr": "(1 - (node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"})) * 100",
+          "expr": "(1 - (node_filesystem_avail_bytes{job=\"integrations/unix\",mountpoint=\"/\"} / node_filesystem_size_bytes{job=\"integrations/unix\",mountpoint=\"/\"})) * 100",
           "legendFormat": "Disk Usage",
           "refId": "A"
         }
@@ -131,7 +131,7 @@
       "id": 4,
       "targets": [
         {
-          "expr": "node_time_seconds - node_boot_time_seconds",
+          "expr": "node_time_seconds{job=\"integrations/unix\"} - node_boot_time_seconds{job=\"integrations/unix\"}",
           "legendFormat": "Uptime",
           "refId": "A"
         }
@@ -158,7 +158,7 @@
       "id": 5,
       "targets": [
         {
-          "expr": "100 - (avg by (mode)(irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+          "expr": "100 - (avg by (mode)(irate(node_cpu_seconds_total{job=\"integrations/unix\",mode=\"idle\"}[5m])) * 100)",
           "legendFormat": "{{mode}}",
           "refId": "A"
         }
@@ -185,17 +185,17 @@
       "id": 6,
       "targets": [
         {
-          "expr": "node_memory_MemTotal_bytes",
+          "expr": "node_memory_MemTotal_bytes{job=\"integrations/unix\"}",
           "legendFormat": "Total",
           "refId": "A"
         },
         {
-          "expr": "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes",
+          "expr": "node_memory_MemTotal_bytes{job=\"integrations/unix\"} - node_memory_MemAvailable_bytes{job=\"integrations/unix\"}",
           "legendFormat": "Used",
           "refId": "B"
         },
         {
-          "expr": "node_memory_Cached_bytes",
+          "expr": "node_memory_Cached_bytes{job=\"integrations/unix\"}",
           "legendFormat": "Cached",
           "refId": "C"
         }
@@ -222,12 +222,12 @@
       "id": 7,
       "targets": [
         {
-          "expr": "rate(node_network_receive_bytes_total{device!~\"lo|veth.*|docker.*|br-.*\"}[5m])",
+          "expr": "rate(node_network_receive_bytes_total{job=\"integrations/unix\",device!~\"lo|veth.*|docker.*|br-.*|cni.*\"}[5m])",
           "legendFormat": "{{device}} RX",
           "refId": "A"
         },
         {
-          "expr": "-rate(node_network_transmit_bytes_total{device!~\"lo|veth.*|docker.*|br-.*\"}[5m])",
+          "expr": "-rate(node_network_transmit_bytes_total{job=\"integrations/unix\",device!~\"lo|veth.*|docker.*|br-.*|cni.*\"}[5m])",
           "legendFormat": "{{device}} TX",
           "refId": "B"
         }
@@ -254,12 +254,12 @@
       "id": 8,
       "targets": [
         {
-          "expr": "rate(node_disk_read_bytes_total[5m])",
+          "expr": "rate(node_disk_read_bytes_total{job=\"integrations/unix\"}[5m])",
           "legendFormat": "{{device}} Read",
           "refId": "A"
         },
         {
-          "expr": "-rate(node_disk_written_bytes_total[5m])",
+          "expr": "-rate(node_disk_written_bytes_total{job=\"integrations/unix\"}[5m])",
           "legendFormat": "{{device}} Write",
           "refId": "B"
         }

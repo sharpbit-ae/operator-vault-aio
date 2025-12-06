@@ -34,10 +34,8 @@ data:
         # Vault requires token for metrics when ACL enabled
         # bearer_token_file: /etc/prometheus/vault-token
 
-      # Node exporter (VM metrics via Alloy)
-      - job_name: 'node'
-        static_configs:
-          - targets: ['alloy:9100']
+      # Note: Host metrics are collected by Alloy DaemonSet (job="integrations/unix")
+      # The node_exporter on the host (10.0.0.20:9100) is not directly reachable from k3d pods
 
       # Loki metrics
       - job_name: 'loki'
