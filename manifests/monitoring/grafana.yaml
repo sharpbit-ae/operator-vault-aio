@@ -81,14 +81,46 @@ data:
   dashboards.yaml: |
     apiVersion: 1
     providers:
-      - name: 'default'
+      - name: 'overview'
         orgId: 1
         folder: ''
         type: file
         disableDeletion: true
         updateIntervalSeconds: 30
         options:
-          path: /var/lib/grafana/dashboards
+          path: /var/lib/grafana/dashboards/overview
+      - name: 'cluster'
+        orgId: 1
+        folder: 'Cluster'
+        type: file
+        disableDeletion: true
+        updateIntervalSeconds: 30
+        options:
+          path: /var/lib/grafana/dashboards/cluster
+      - name: 'logs'
+        orgId: 1
+        folder: 'Logs'
+        type: file
+        disableDeletion: true
+        updateIntervalSeconds: 30
+        options:
+          path: /var/lib/grafana/dashboards/logs
+      - name: 'metrics'
+        orgId: 1
+        folder: 'Metrics'
+        type: file
+        disableDeletion: true
+        updateIntervalSeconds: 30
+        options:
+          path: /var/lib/grafana/dashboards/metrics
+      - name: 'security'
+        orgId: 1
+        folder: 'Security'
+        type: file
+        disableDeletion: true
+        updateIntervalSeconds: 30
+        options:
+          path: /var/lib/grafana/dashboards/security
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -133,8 +165,16 @@ spec:
             - name: config
               mountPath: /etc/grafana/provisioning/dashboards/dashboards.yaml
               subPath: dashboards.yaml
-            - name: dashboards
-              mountPath: /var/lib/grafana/dashboards
+            - name: dashboards-overview
+              mountPath: /var/lib/grafana/dashboards/overview
+            - name: dashboards-cluster
+              mountPath: /var/lib/grafana/dashboards/cluster
+            - name: dashboards-logs
+              mountPath: /var/lib/grafana/dashboards/logs
+            - name: dashboards-metrics
+              mountPath: /var/lib/grafana/dashboards/metrics
+            - name: dashboards-security
+              mountPath: /var/lib/grafana/dashboards/security
             - name: data
               mountPath: /var/lib/grafana
           resources:
@@ -158,9 +198,21 @@ spec:
         - name: config
           configMap:
             name: grafana-config
-        - name: dashboards
+        - name: dashboards-overview
           configMap:
-            name: grafana-dashboards
+            name: grafana-dashboards-overview
+        - name: dashboards-cluster
+          configMap:
+            name: grafana-dashboards-cluster
+        - name: dashboards-logs
+          configMap:
+            name: grafana-dashboards-logs
+        - name: dashboards-metrics
+          configMap:
+            name: grafana-dashboards-metrics
+        - name: dashboards-security
+          configMap:
+            name: grafana-dashboards-security
         - name: data
           persistentVolumeClaim:
             claimName: grafana-data
