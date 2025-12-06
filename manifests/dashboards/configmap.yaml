@@ -6,6 +6,194 @@ metadata:
   labels:
     grafana_dashboard: "1"
 data:
+  cluster-diagnostics.json: |
+    {
+      "annotations": {"list": []},
+      "editable": true,
+      "id": null,
+      "links": [],
+      "panels": [
+        {"gridPos": {"h": 2, "w": 24, "x": 0, "y": 0}, "id": 100, "options": {"content": "# Cluster Diagnostics\nReal-time health checks and troubleshooting information", "mode": "markdown"}, "title": "", "transparent": true, "type": "text"},
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "mappings": [{"options": {"1": {"text": "UP", "color": "green"}, "0": {"text": "DOWN", "color": "red"}}, "type": "value"}], "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}},
+          "gridPos": {"h": 3, "w": 3, "x": 0, "y": 2},
+          "id": 1,
+          "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+          "targets": [{"expr": "up{job=\"vault\"}", "refId": "A"}],
+          "title": "Vault",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "mappings": [{"options": {"1": {"text": "UP", "color": "green"}, "0": {"text": "DOWN", "color": "red"}}, "type": "value"}], "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}},
+          "gridPos": {"h": 3, "w": 3, "x": 3, "y": 2},
+          "id": 2,
+          "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+          "targets": [{"expr": "up{job=\"prometheus\"}", "refId": "A"}],
+          "title": "Prometheus",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "mappings": [{"options": {"1": {"text": "UP", "color": "green"}, "0": {"text": "DOWN", "color": "red"}}, "type": "value"}], "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}},
+          "gridPos": {"h": 3, "w": 3, "x": 6, "y": 2},
+          "id": 3,
+          "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+          "targets": [{"expr": "up{job=\"loki\"}", "refId": "A"}],
+          "title": "Loki",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "mappings": [{"options": {"1": {"text": "UP", "color": "green"}, "0": {"text": "DOWN", "color": "red"}}, "type": "value"}], "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}},
+          "gridPos": {"h": 3, "w": 3, "x": 9, "y": 2},
+          "id": 4,
+          "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+          "targets": [{"expr": "up{job=\"tempo\"}", "refId": "A"}],
+          "title": "Tempo",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "mappings": [{"options": {"1": {"text": "UP", "color": "green"}, "0": {"text": "DOWN", "color": "red"}}, "type": "value"}], "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}},
+          "gridPos": {"h": 3, "w": 3, "x": 12, "y": 2},
+          "id": 5,
+          "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+          "targets": [{"expr": "up{job=\"alertmanager\"}", "refId": "A"}],
+          "title": "Alertmanager",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "mappings": [{"options": {"1": {"text": "UP", "color": "green"}, "0": {"text": "DOWN", "color": "red"}}, "type": "value"}], "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}},
+          "gridPos": {"h": 3, "w": 3, "x": 15, "y": 2},
+          "id": 6,
+          "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+          "targets": [{"expr": "up{job=\"grafana\"}", "refId": "A"}],
+          "title": "Grafana",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "mappings": [{"options": {"1": {"text": "UP", "color": "green"}, "0": {"text": "DOWN", "color": "red"}}, "type": "value"}], "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}},
+          "gridPos": {"h": 3, "w": 3, "x": 18, "y": 2},
+          "id": 7,
+          "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+          "targets": [{"expr": "up{job=\"integrations/unix\"}", "refId": "A"}],
+          "title": "Host/Alloy",
+          "type": "stat"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}, "unit": "short"}},
+          "gridPos": {"h": 3, "w": 3, "x": 21, "y": 2},
+          "id": 8,
+          "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}, "textMode": "value"},
+          "targets": [{"expr": "count(up == 0) or vector(0)", "refId": "A"}],
+          "title": "Down Count",
+          "type": "stat"
+        },
+        {"gridPos": {"h": 1, "w": 24, "x": 0, "y": 5}, "id": 200, "title": "Scrape Target Details", "type": "row"},
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {"defaults": {"custom": {"displayMode": "auto"}}},
+          "gridPos": {"h": 6, "w": 24, "x": 0, "y": 6},
+          "id": 9,
+          "options": {"showHeader": true, "sortBy": [{"desc": true, "displayName": "Value"}]},
+          "targets": [{"expr": "up", "format": "table", "instant": true, "refId": "A"}],
+          "title": "All Scrape Targets",
+          "transformations": [
+            {"id": "organize", "options": {"excludeByName": {"Time": true, "__name__": true}, "renameByName": {"Value": "Status (1=UP)", "instance": "Instance", "job": "Job"}}}
+          ],
+          "type": "table"
+        },
+        {"gridPos": {"h": 1, "w": 24, "x": 0, "y": 12}, "id": 201, "title": "Prometheus Scrape Health", "type": "row"},
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "pointSize": 5, "showPoints": "never"}, "unit": "s"}},
+          "gridPos": {"h": 6, "w": 12, "x": 0, "y": 13},
+          "id": 10,
+          "targets": [
+            {"expr": "scrape_duration_seconds", "legendFormat": "{{job}}", "refId": "A"}
+          ],
+          "title": "Scrape Duration by Job",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "pointSize": 5, "showPoints": "never"}, "unit": "short"}},
+          "gridPos": {"h": 6, "w": 12, "x": 12, "y": 13},
+          "id": 11,
+          "targets": [
+            {"expr": "scrape_samples_scraped", "legendFormat": "{{job}}", "refId": "A"}
+          ],
+          "title": "Samples Scraped by Job",
+          "type": "timeseries"
+        },
+        {"gridPos": {"h": 1, "w": 24, "x": 0, "y": 19}, "id": 202, "title": "Log Collection Health", "type": "row"},
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "pointSize": 5, "showPoints": "never"}, "unit": "short"}},
+          "gridPos": {"h": 6, "w": 12, "x": 0, "y": 20},
+          "id": 12,
+          "targets": [
+            {"expr": "loki_ingester_streams_created_total - loki_ingester_streams_removed_total", "legendFormat": "Active Streams", "refId": "A"}
+          ],
+          "title": "Loki Active Streams",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "pointSize": 5, "showPoints": "never"}, "unit": "ops"}},
+          "gridPos": {"h": 6, "w": 12, "x": 12, "y": 20},
+          "id": 13,
+          "targets": [
+            {"expr": "rate(loki_distributor_lines_received_total[5m])", "legendFormat": "Lines Received/s", "refId": "A"},
+            {"expr": "rate(loki_distributor_bytes_received_total[5m])", "legendFormat": "Bytes Received/s", "refId": "B"}
+          ],
+          "title": "Loki Ingestion Rate",
+          "type": "timeseries"
+        },
+        {"gridPos": {"h": 1, "w": 24, "x": 0, "y": 26}, "id": 203, "title": "Recent Logs by Source", "type": "row"},
+        {
+          "datasource": {"type": "loki", "uid": "loki"},
+          "gridPos": {"h": 4, "w": 24, "x": 0, "y": 27},
+          "id": 14,
+          "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false},
+          "targets": [{"expr": "{namespace=\"vault-aio\"}", "refId": "A", "maxLines": 20}],
+          "title": "All vault-aio Namespace Logs (Last 20)",
+          "type": "logs"
+        },
+        {
+          "datasource": {"type": "loki", "uid": "loki"},
+          "gridPos": {"h": 4, "w": 24, "x": 0, "y": 31},
+          "id": 15,
+          "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false},
+          "targets": [{"expr": "{job=~\".+\"}", "refId": "A", "maxLines": 20}],
+          "title": "All Logs (Any Job - Last 20)",
+          "type": "logs"
+        },
+        {
+          "datasource": {"type": "loki", "uid": "loki"},
+          "fieldConfig": {"defaults": {"custom": {"displayMode": "auto"}}},
+          "gridPos": {"h": 5, "w": 24, "x": 0, "y": 35},
+          "id": 16,
+          "options": {"showHeader": true},
+          "targets": [{"expr": "count_over_time({namespace=\"vault-aio\"}[1h])", "legendFormat": "", "refId": "A", "instant": true}],
+          "title": "Log Count by Label (Last 1h)",
+          "transformations": [{"id": "reduce", "options": {"reducers": ["sum"]}}],
+          "type": "stat"
+        }
+      ],
+      "refresh": "10s",
+      "schemaVersion": 38,
+      "tags": ["diagnostics", "health", "troubleshooting"],
+      "time": {"from": "now-1h", "to": "now"},
+      "title": "cluster-diagnostics",
+      "uid": "cluster-diagnostics",
+      "version": 1
+    }
   cluster-network.json: |
     {
       "annotations": {"list": []},
