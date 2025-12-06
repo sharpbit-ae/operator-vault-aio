@@ -1,0 +1,118 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: vault
+  namespace: vault-aio
+spec:
+  hosts:
+    - "vault.vault-aio.local"
+  gateways:
+    - vault-aio-gateway
+  http:
+    - route:
+        - destination:
+            host: vault
+            port:
+              number: 8200
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: grafana
+  namespace: vault-aio
+spec:
+  hosts:
+    - "grafana.vault-aio.local"
+  gateways:
+    - vault-aio-gateway
+  http:
+    - route:
+        - destination:
+            host: grafana
+            port:
+              number: 3000
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: prometheus
+  namespace: vault-aio
+spec:
+  hosts:
+    - "prometheus.vault-aio.local"
+  gateways:
+    - vault-aio-gateway
+  http:
+    - route:
+        - destination:
+            host: prometheus
+            port:
+              number: 9090
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: alertmanager
+  namespace: vault-aio
+spec:
+  hosts:
+    - "alertmanager.vault-aio.local"
+  gateways:
+    - vault-aio-gateway
+  http:
+    - route:
+        - destination:
+            host: alertmanager
+            port:
+              number: 9093
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: loki
+  namespace: vault-aio
+spec:
+  hosts:
+    - "loki.vault-aio.local"
+  gateways:
+    - vault-aio-gateway
+  http:
+    - route:
+        - destination:
+            host: loki
+            port:
+              number: 3100
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: tempo
+  namespace: vault-aio
+spec:
+  hosts:
+    - "tempo.vault-aio.local"
+  gateways:
+    - vault-aio-gateway
+  http:
+    - route:
+        - destination:
+            host: tempo
+            port:
+              number: 3200
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: homepage
+  namespace: vault-aio
+spec:
+  hosts:
+    - "vault-aio.local"
+  gateways:
+    - vault-aio-gateway
+  http:
+    - route:
+        - destination:
+            host: homepage
+            port:
+              number: 80

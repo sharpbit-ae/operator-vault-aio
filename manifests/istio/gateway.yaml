@@ -1,0 +1,38 @@
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: vault-aio-gateway
+  namespace: vault-aio
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "vault-aio.local"
+        - "vault.vault-aio.local"
+        - "grafana.vault-aio.local"
+        - "prometheus.vault-aio.local"
+        - "alertmanager.vault-aio.local"
+        - "loki.vault-aio.local"
+        - "tempo.vault-aio.local"
+      tls:
+        httpsRedirect: false
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      hosts:
+        - "vault-aio.local"
+        - "vault.vault-aio.local"
+        - "grafana.vault-aio.local"
+        - "prometheus.vault-aio.local"
+        - "alertmanager.vault-aio.local"
+        - "loki.vault-aio.local"
+        - "tempo.vault-aio.local"
+      tls:
+        mode: SIMPLE
+        credentialName: vault-aio-tls

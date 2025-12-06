@@ -20,23 +20,22 @@ resources:
   - tracing/tempo.yaml
   # NTP
   - ntp/chrony.yaml
-  # Network Policies
-  - network-policies/default-deny.yaml
-  - network-policies/vault-policy.yaml
-  - network-policies/monitoring-policy.yaml
-  - network-policies/logging-policy.yaml
-  - network-policies/tracing-ntp-policy.yaml
-  - network-policies/ingress-policy.yaml
+  # Istio Service Mesh
+  - istio/gateway.yaml
+  - istio/virtual-services.yaml
+  - istio/destination-rules.yaml
+  - istio/authorization-policies.yaml
   # Dashboards
   - dashboards/configmap-overview.yaml
   - dashboards/configmap-cluster.yaml
   - dashboards/configmap-logs.yaml
   - dashboards/configmap-metrics.yaml
   - dashboards/configmap-security.yaml
-  # Ingress & Homepage
+  # Homepage
   - ingress/homepage.yaml
-  - ingress/ingress.yaml
 
-commonLabels:
-  app.kubernetes.io/part-of: vault-aio
-  app.kubernetes.io/managed-by: kustomize
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: vault-aio
+      app.kubernetes.io/managed-by: kustomize
+    includeSelectors: false

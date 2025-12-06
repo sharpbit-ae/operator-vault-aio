@@ -1,0 +1,76 @@
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: vault-mtls
+  namespace: vault-aio
+spec:
+  host: vault
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: grafana-mtls
+  namespace: vault-aio
+spec:
+  host: grafana
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: prometheus-mtls
+  namespace: vault-aio
+spec:
+  host: prometheus
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: alertmanager-mtls
+  namespace: vault-aio
+spec:
+  host: alertmanager
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: loki-mtls
+  namespace: vault-aio
+spec:
+  host: loki
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: tempo-mtls
+  namespace: vault-aio
+spec:
+  host: tempo
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: homepage-mtls
+  namespace: vault-aio
+spec:
+  host: homepage
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
