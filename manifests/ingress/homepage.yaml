@@ -152,6 +152,10 @@ data:
         .tempo .service-icon { background: linear-gradient(135deg, #7c3aed, #8b5cf6); }
         .argocd .service-icon { background: linear-gradient(135deg, #ef6c00, #ff9800); }
         .chrony .service-icon { background: linear-gradient(135deg, #4caf50, #66bb6a); }
+        .coredns .service-icon { background: linear-gradient(135deg, #2196f3, #42a5f5); }
+        .traefik .service-icon { background: linear-gradient(135deg, #24a1c1, #37b3d0); }
+        .certmanager .service-icon { background: linear-gradient(135deg, #0a7cbc, #1a8ccc); }
+        .metrics .service-icon { background: linear-gradient(135deg, #9c27b0, #ba68c8); }
 
         .section-title {
           font-size: 1.5rem;
@@ -356,9 +360,58 @@ data:
             <div class="service-url">tempo.vault.aeon.io</div>
           </a>
 
-          <div class="service-card chrony" style="cursor: default;">
+        </div>
+
+        <h2 class="section-title">Infrastructure Tools</h2>
+        <div class="services-grid">
+          <div class="service-card coredns" style="cursor: default;">
+            <div class="service-header">
+              <div class="service-icon">D</div>
+              <div class="service-title">
+                <h3>CoreDNS</h3>
+                <span>Cluster DNS</span>
+              </div>
+              <span class="status-badge status-running">RUNNING</span>
+            </div>
+            <p class="service-description">
+              DNS server for Kubernetes service discovery. Resolves cluster-internal names.
+            </p>
+            <div class="service-url">10.43.0.10:53 (kube-system)</div>
+          </div>
+
+          <div class="service-card traefik" style="cursor: default;">
+            <div class="service-header">
+              <div class="service-icon">T</div>
+              <div class="service-title">
+                <h3>Traefik</h3>
+                <span>Ingress Controller</span>
+              </div>
+              <span class="status-badge status-running">RUNNING</span>
+            </div>
+            <p class="service-description">
+              Cloud-native edge router. Handles HTTP/HTTPS ingress and TLS termination.
+            </p>
+            <div class="service-url">Ports 80, 443 (kube-system)</div>
+          </div>
+
+          <div class="service-card certmanager" style="cursor: default;">
             <div class="service-header">
               <div class="service-icon">C</div>
+              <div class="service-title">
+                <h3>cert-manager</h3>
+                <span>Certificate Management</span>
+              </div>
+              <span class="status-badge status-running">RUNNING</span>
+            </div>
+            <p class="service-description">
+              Automates certificate issuance and renewal from Vault PKI and other sources.
+            </p>
+            <div class="service-url">cert-manager namespace</div>
+          </div>
+
+          <div class="service-card chrony" style="cursor: default;">
+            <div class="service-header">
+              <div class="service-icon">N</div>
               <div class="service-title">
                 <h3>Chrony</h3>
                 <span>NTP Time Sync</span>
