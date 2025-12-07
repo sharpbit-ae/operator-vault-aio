@@ -14,64 +14,9 @@ spec:
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
 metadata:
-  name: allow-prometheus-scraping
-  namespace: vault-aio
-spec:
-  selector:
-    matchLabels:
-      app: vault
-  action: ALLOW
-  rules:
-    - from:
-        - source:
-            principals:
-              - "cluster.local/ns/vault-aio/sa/prometheus"
-      to:
-        - operation:
-            ports: ["8200"]
----
-apiVersion: security.istio.io/v1
-kind: AuthorizationPolicy
-metadata:
-  name: allow-internal-monitoring
+  name: allow-all-internal
   namespace: vault-aio
 spec:
   action: ALLOW
   rules:
-    - from:
-        - source:
-            namespaces: ["vault-aio"]
----
-apiVersion: security.istio.io/v1
-kind: AuthorizationPolicy
-metadata:
-  name: allow-alloy-logs
-  namespace: vault-aio
-spec:
-  action: ALLOW
-  rules:
-    - from:
-        - source:
-            principals:
-              - "cluster.local/ns/vault-aio/sa/alloy"
-      to:
-        - operation:
-            ports: ["3100", "4317", "4318"]
----
-apiVersion: security.istio.io/v1
-kind: AuthorizationPolicy
-metadata:
-  name: allow-tempo-traces
-  namespace: vault-aio
-spec:
-  selector:
-    matchLabels:
-      app: tempo
-  action: ALLOW
-  rules:
-    - from:
-        - source:
-            namespaces: ["vault-aio"]
-      to:
-        - operation:
-            ports: ["3200", "4317", "4318", "9411", "14268"]
+    - {}

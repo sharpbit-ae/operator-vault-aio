@@ -191,6 +191,20 @@ data:
           transition: background 0.3s;
         }
         .quick-link:hover { background: var(--accent); }
+        .copy-btn {
+          background: var(--accent);
+          border: none;
+          color: white;
+          padding: 4px 10px;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 0.75rem;
+          margin-left: 8px;
+          transition: background 0.3s;
+        }
+        .copy-btn:hover { background: var(--accent-hover); }
+        .copy-btn.copied { background: var(--success); }
+        .token-wrapper { display: inline-flex; align-items: center; }
       </style>
     </head>
     <body>
@@ -233,50 +247,37 @@ data:
         <div class="quick-links">
           <h2>Quick Access</h2>
           <div class="links-row">
-            <a href="https://vault.vault-aio.local" class="quick-link" target="_blank" rel="noopener">Vault</a>
-            <a href="https://grafana.vault-aio.local" class="quick-link" target="_blank" rel="noopener">Grafana</a>
-            <a href="https://prometheus.vault-aio.local" class="quick-link" target="_blank" rel="noopener">Prometheus</a>
-            <a href="https://alertmanager.vault-aio.local" class="quick-link" target="_blank" rel="noopener">Alertmanager</a>
-            <a href="https://argocd.vault-aio.local" class="quick-link" target="_blank" rel="noopener">ArgoCD</a>
+            <a href="https://vault.vault.aeon.io/ui/" class="quick-link" target="_blank">Vault</a>
+            <a href="https://grafana.vault.aeon.io/" class="quick-link" target="_blank">Grafana</a>
+            <a href="https://prometheus.vault.aeon.io/" class="quick-link" target="_blank">Prometheus</a>
+            <a href="https://alertmanager.vault.aeon.io/" class="quick-link" target="_blank">Alertmanager</a>
+            <a href="https://loki.vault.aeon.io/ready" class="quick-link" target="_blank">Loki</a>
+            <a href="https://tempo.vault.aeon.io/ready" class="quick-link" target="_blank">Tempo</a>
           </div>
         </div>
 
         <h2 class="section-title">Core Services</h2>
         <div class="services-grid">
-          <a href="https://vault.vault-aio.local" class="service-card vault" target="_blank" rel="noopener">
+          <a href="https://vault.vault.aeon.io/ui/" class="service-card vault" target="_blank">
             <div class="service-header">
               <div class="service-icon">V</div>
               <div class="service-title">
                 <h3>HashiCorp Vault</h3>
                 <span>Secrets Management</span>
               </div>
-              <span class="status-badge status-dev">DEV</span>
-            </div>
-            <p class="service-description">
-              Secure secrets storage, dynamic credentials, encryption as a service, and PKI management.
-            </p>
-            <div class="service-url">https://vault.vault-aio.local</div>
-          </a>
-
-          <a href="https://argocd.vault-aio.local" class="service-card argocd" target="_blank" rel="noopener">
-            <div class="service-header">
-              <div class="service-icon">A</div>
-              <div class="service-title">
-                <h3>ArgoCD</h3>
-                <span>GitOps Continuous Delivery</span>
-              </div>
               <span class="status-badge status-running">RUNNING</span>
             </div>
             <p class="service-description">
-              Declarative, GitOps continuous delivery tool for Kubernetes applications.
+              Secure secrets storage, dynamic credentials, encryption as a service, and PKI management.
+              <br><strong>Admin Token:</strong> See K8s secret <code style="font-size: 0.8rem; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">vault-admin-token</code>
             </p>
-            <div class="service-url">https://argocd.vault-aio.local</div>
+            <div class="service-url">vault.vault.aeon.io</div>
           </a>
         </div>
 
         <h2 class="section-title">Monitoring & Visualization</h2>
         <div class="services-grid">
-          <a href="https://grafana.vault-aio.local" class="service-card grafana" target="_blank" rel="noopener">
+          <a href="https://grafana.vault.aeon.io/" class="service-card grafana" target="_blank">
             <div class="service-header">
               <div class="service-icon">G</div>
               <div class="service-title">
@@ -287,12 +288,12 @@ data:
             </div>
             <p class="service-description">
               Query, visualize, and alert on metrics from Prometheus, Loki, and Tempo.
-              <br><strong>Login:</strong> admin / (see vault-app-passwords secret)
+              <br><strong>Login:</strong> See Vault: secret/vault-aio/grafana
             </p>
-            <div class="service-url">https://grafana.vault-aio.local</div>
+            <div class="service-url">grafana.vault.aeon.io</div>
           </a>
 
-          <a href="https://prometheus.vault-aio.local" class="service-card prometheus" target="_blank" rel="noopener">
+          <a href="https://prometheus.vault.aeon.io/" class="service-card prometheus" target="_blank">
             <div class="service-header">
               <div class="service-icon">P</div>
               <div class="service-title">
@@ -304,10 +305,10 @@ data:
             <p class="service-description">
               Time-series metrics collection and alerting. Scrapes Vault, Kubernetes, and all services.
             </p>
-            <div class="service-url">https://prometheus.vault-aio.local</div>
+            <div class="service-url">prometheus.vault.aeon.io</div>
           </a>
 
-          <a href="https://alertmanager.vault-aio.local" class="service-card alertmanager" target="_blank" rel="noopener">
+          <a href="https://alertmanager.vault.aeon.io/" class="service-card alertmanager" target="_blank">
             <div class="service-header">
               <div class="service-icon">!</div>
               <div class="service-title">
@@ -319,13 +320,13 @@ data:
             <p class="service-description">
               Handles alerts from Prometheus, including silencing, inhibition, and routing.
             </p>
-            <div class="service-url">https://alertmanager.vault-aio.local</div>
+            <div class="service-url">alertmanager.vault.aeon.io</div>
           </a>
         </div>
 
         <h2 class="section-title">Logging & Tracing</h2>
         <div class="services-grid">
-          <a href="https://loki.vault-aio.local/ready" class="service-card loki" target="_blank" rel="noopener">
+          <a href="https://loki.vault.aeon.io/ready" class="service-card loki" target="_blank">
             <div class="service-header">
               <div class="service-icon">L</div>
               <div class="service-title">
@@ -337,10 +338,10 @@ data:
             <p class="service-description">
               Horizontally-scalable log aggregation system. Query via Grafana Explore.
             </p>
-            <div class="service-url">https://loki.vault-aio.local (API)</div>
+            <div class="service-url">loki.vault.aeon.io</div>
           </a>
 
-          <a href="https://tempo.vault-aio.local/ready" class="service-card tempo" target="_blank" rel="noopener">
+          <a href="https://tempo.vault.aeon.io/ready" class="service-card tempo" target="_blank">
             <div class="service-header">
               <div class="service-icon">T</div>
               <div class="service-title">
@@ -352,7 +353,7 @@ data:
             <p class="service-description">
               High-scale distributed tracing backend. Visualize traces in Grafana.
             </p>
-            <div class="service-url">https://tempo.vault-aio.local (API)</div>
+            <div class="service-url">tempo.vault.aeon.io</div>
           </a>
 
           <div class="service-card chrony" style="cursor: default;">
@@ -405,9 +406,9 @@ data:
           <h2>Access from Host</h2>
           <div class="info-grid" style="grid-template-columns: 1fr;">
             <div class="info-item">
-              <label>Add to /etc/hosts on your machine:</label>
-              <span style="font-family: monospace; font-size: 0.9rem;">
-                10.0.0.20 vault-aio.local vault.vault-aio.local grafana.vault-aio.local prometheus.vault-aio.local alertmanager.vault-aio.local loki.vault-aio.local tempo.vault-aio.local argocd.vault-aio.local
+              <label>Add to /etc/hosts or DNS:</label>
+              <span style="font-family: monospace; font-size: 0.85rem;">
+                10.0.0.20 homepage.vault.aeon.io vault.vault.aeon.io grafana.vault.aeon.io prometheus.vault.aeon.io alertmanager.vault.aeon.io loki.vault.aeon.io tempo.vault.aeon.io
               </span>
             </div>
           </div>
@@ -418,6 +419,22 @@ data:
           <p>Built with HashiCorp Vault, Grafana Stack, and Kubernetes</p>
         </footer>
       </div>
+      <script>
+        function copyToken(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          const token = document.getElementById('vault-token').textContent;
+          navigator.clipboard.writeText(token).then(() => {
+            const btn = e.target;
+            btn.textContent = 'Copied!';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = 'Copy';
+              btn.classList.remove('copied');
+            }, 2000);
+          });
+        }
+      </script>
     </body>
     </html>
 ---

@@ -25,6 +25,7 @@ resources:
   - istio/virtual-services.yaml
   - istio/destination-rules.yaml
   - istio/authorization-policies.yaml
+  - istio/peer-authentication.yaml
   # Dashboards
   - dashboards/configmap-overview.yaml
   - dashboards/configmap-cluster.yaml

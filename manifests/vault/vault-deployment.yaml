@@ -54,12 +54,12 @@ spec:
               value: "json"
           args:
             - server
-            - -dev
-            - -dev-root-token-id=root
-            - -dev-listen-address=0.0.0.0:8200
+            - -config=/vault/userconfig/vault.hcl
           volumeMounts:
             - name: vault-data
               mountPath: /vault/data
+            - name: vault-config
+              mountPath: /vault/userconfig
           resources:
             requests:
               memory: "256Mi"
@@ -94,6 +94,9 @@ spec:
         - name: vault-data
           persistentVolumeClaim:
             claimName: vault-data
+        - name: vault-config
+          configMap:
+            name: vault-config
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
