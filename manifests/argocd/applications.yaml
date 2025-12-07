@@ -1,0 +1,223 @@
+---
+# ArgoCD Project for Vault AIO
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: vault-aio
+  namespace: argocd
+spec:
+  description: Vault AIO Infrastructure Stack
+  sourceRepos:
+    - 'https://github.com/sharpbit-ae/operator-vault-aio.git'
+  destinations:
+    - namespace: vault-aio
+      server: https://kubernetes.default.svc
+    - namespace: cert-manager
+      server: https://kubernetes.default.svc
+    - namespace: argocd
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+---
+# Main Vault AIO Application (uses Kustomize)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vault-aio-stack
+  namespace: argocd
+spec:
+  project: vault-aio
+  source:
+    repoURL: https://github.com/sharpbit-ae/operator-vault-aio.git
+    targetRevision: main
+    path: manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vault-aio
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ApplyOutOfSyncOnly=true
+---
+# Cert-Manager Integration
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vault-aio-cert-manager
+  namespace: argocd
+spec:
+  project: vault-aio
+  source:
+    repoURL: https://github.com/sharpbit-ae/operator-vault-aio.git
+    targetRevision: main
+    path: manifests/cert-manager
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+---
+# Monitoring Stack
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vault-aio-monitoring
+  namespace: argocd
+spec:
+  project: vault-aio
+  source:
+    repoURL: https://github.com/sharpbit-ae/operator-vault-aio.git
+    targetRevision: main
+    path: manifests/monitoring
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vault-aio
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+---
+# Logging Stack (Loki)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vault-aio-logging
+  namespace: argocd
+spec:
+  project: vault-aio
+  source:
+    repoURL: https://github.com/sharpbit-ae/operator-vault-aio.git
+    targetRevision: main
+    path: manifests/logging
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vault-aio
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+---
+# Tracing Stack (Tempo)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vault-aio-tracing
+  namespace: argocd
+spec:
+  project: vault-aio
+  source:
+    repoURL: https://github.com/sharpbit-ae/operator-vault-aio.git
+    targetRevision: main
+    path: manifests/tracing
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vault-aio
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+---
+# Vault
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vault-aio-vault
+  namespace: argocd
+spec:
+  project: vault-aio
+  source:
+    repoURL: https://github.com/sharpbit-ae/operator-vault-aio.git
+    targetRevision: main
+    path: manifests/vault
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vault-aio
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+---
+# Ingress Routes
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vault-aio-ingress
+  namespace: argocd
+spec:
+  project: vault-aio
+  source:
+    repoURL: https://github.com/sharpbit-ae/operator-vault-aio.git
+    targetRevision: main
+    path: manifests/ingress
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vault-aio
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+---
+# Grafana Dashboards
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vault-aio-dashboards
+  namespace: argocd
+spec:
+  project: vault-aio
+  source:
+    repoURL: https://github.com/sharpbit-ae/operator-vault-aio.git
+    targetRevision: main
+    path: manifests/dashboards
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vault-aio
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+---
+# NTP (Chrony)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vault-aio-ntp
+  namespace: argocd
+spec:
+  project: vault-aio
+  source:
+    repoURL: https://github.com/sharpbit-ae/operator-vault-aio.git
+    targetRevision: main
+    path: manifests/ntp
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vault-aio
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
