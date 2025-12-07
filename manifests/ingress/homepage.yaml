@@ -156,6 +156,55 @@ data:
         .traefik .service-icon { background: linear-gradient(135deg, #24a1c1, #37b3d0); }
         .certmanager .service-icon { background: linear-gradient(135deg, #0a7cbc, #1a8ccc); }
         .metrics .service-icon { background: linear-gradient(135deg, #9c27b0, #ba68c8); }
+        .argocd .service-icon { background: linear-gradient(135deg, #ef6c00, #ff9800); }
+        .vm-stats {
+          background: var(--bg-card);
+          border-radius: 12px;
+          padding: 25px;
+          margin-bottom: 30px;
+          border: 1px solid rgba(255,255,255,0.1);
+        }
+        .vm-stats h2 { color: var(--success); margin-bottom: 15px; }
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 15px;
+        }
+        .stat-item {
+          background: rgba(0,0,0,0.2);
+          padding: 15px;
+          border-radius: 8px;
+          text-align: center;
+        }
+        .stat-item label {
+          color: var(--text-secondary);
+          font-size: 0.8rem;
+          display: block;
+          margin-bottom: 5px;
+        }
+        .stat-value {
+          font-size: 1.5rem;
+          font-weight: 700;
+          color: var(--text-primary);
+        }
+        .stat-value.good { color: var(--success); }
+        .stat-value.warn { color: var(--warning); }
+        .stat-value.bad { color: var(--accent); }
+        .progress-bar {
+          height: 6px;
+          background: rgba(255,255,255,0.1);
+          border-radius: 3px;
+          margin-top: 8px;
+          overflow: hidden;
+        }
+        .progress-fill {
+          height: 100%;
+          border-radius: 3px;
+          transition: width 0.5s ease;
+        }
+        .progress-fill.good { background: var(--success); }
+        .progress-fill.warn { background: var(--warning); }
+        .progress-fill.bad { background: var(--accent); }
 
         .section-title {
           font-size: 1.5rem;
@@ -217,6 +266,39 @@ data:
           <h1>Vault AIO Dashboard</h1>
           <p>All-in-One HashiCorp Vault with Integrated Observability Stack</p>
         </header>
+
+        <div class="vm-stats">
+          <h2>VM Resources (Live)</h2>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <label>CPU Usage</label>
+              <span class="stat-value" id="cpu-val">--</span>
+              <div class="progress-bar"><div class="progress-fill" id="cpu-bar" style="width: 0%"></div></div>
+            </div>
+            <div class="stat-item">
+              <label>Memory</label>
+              <span class="stat-value" id="mem-val">--</span>
+              <div class="progress-bar"><div class="progress-fill" id="mem-bar" style="width: 0%"></div></div>
+            </div>
+            <div class="stat-item">
+              <label>Disk Used</label>
+              <span class="stat-value" id="disk-val">--</span>
+              <div class="progress-bar"><div class="progress-fill" id="disk-bar" style="width: 0%"></div></div>
+            </div>
+            <div class="stat-item">
+              <label>Disk Free</label>
+              <span class="stat-value good" id="disk-free">--</span>
+            </div>
+            <div class="stat-item">
+              <label>Load Avg</label>
+              <span class="stat-value" id="load-val">--</span>
+            </div>
+            <div class="stat-item">
+              <label>Uptime</label>
+              <span class="stat-value good" id="uptime-val">--</span>
+            </div>
+          </div>
+        </div>
 
         <div class="cluster-info">
           <h2>Cluster Information</h2>
@@ -364,6 +446,21 @@ data:
 
         <h2 class="section-title">Infrastructure Tools</h2>
         <div class="services-grid">
+          <a href="https://argocd.vault.aeon.io/" class="service-card argocd" target="_blank">
+            <div class="service-header">
+              <div class="service-icon">A</div>
+              <div class="service-title">
+                <h3>ArgoCD</h3>
+                <span>GitOps Delivery</span>
+              </div>
+              <span class="status-badge status-running">RUNNING</span>
+            </div>
+            <p class="service-description">
+              Declarative GitOps CD for Kubernetes. Credentials in Vault: secret/vault-aio/argocd
+            </p>
+            <div class="service-url">argocd.vault.aeon.io</div>
+          </a>
+
           <div class="service-card coredns" style="cursor: default;">
             <div class="service-header">
               <div class="service-icon">D</div>
@@ -487,6 +584,46 @@ data:
             }, 2000);
           });
         }
+
+        function getStatusClass(val, warn, bad) {
+          if (val >= bad) return 'bad';
+          if (val >= warn) return 'warn';
+          return 'good';
+        }
+
+        function updateStats() {
+          fetch('https://stats.vault.aeon.io/stats.json')
+            .then(r => r.json())
+            .then(d => {
+              const cpuClass = getStatusClass(d.cpu_val, 60, 85);
+              document.getElementById('cpu-val').textContent = d.cpu;
+              document.getElementById('cpu-val').className = 'stat-value ' + cpuClass;
+              document.getElementById('cpu-bar').style.width = d.cpu_val + '%';
+              document.getElementById('cpu-bar').className = 'progress-fill ' + cpuClass;
+
+              const memClass = getStatusClass(d.mem_pct, 70, 90);
+              document.getElementById('mem-val').textContent = d.mem;
+              document.getElementById('mem-val').className = 'stat-value ' + memClass;
+              document.getElementById('mem-bar').style.width = d.mem_pct + '%';
+              document.getElementById('mem-bar').className = 'progress-fill ' + memClass;
+
+              const diskClass = getStatusClass(d.disk_pct, 70, 90);
+              document.getElementById('disk-val').textContent = d.disk_used;
+              document.getElementById('disk-val').className = 'stat-value ' + diskClass;
+              document.getElementById('disk-bar').style.width = d.disk_pct + '%';
+              document.getElementById('disk-bar').className = 'progress-fill ' + diskClass;
+
+              document.getElementById('disk-free').textContent = d.disk_free + ' (' + (100 - d.disk_pct) + '% free)';
+              document.getElementById('load-val').textContent = d.load;
+              document.getElementById('uptime-val').textContent = d.uptime;
+            })
+            .catch(() => {
+              document.getElementById('cpu-val').textContent = 'N/A';
+            });
+        }
+
+        updateStats();
+        setInterval(updateStats, 10000);
       </script>
     </body>
     </html>
